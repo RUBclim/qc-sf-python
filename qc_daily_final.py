@@ -5,7 +5,7 @@ import sys
 import click 
 import pathlib
 import json
-#import git
+import git
 
 from datetime import date, timedelta
 
@@ -141,7 +141,6 @@ df = pd.concat([df1, df2, df3])
 df = pd.merge(df, df_id, how = "right", right_index=True, left_index = True)
 print('complete dataframe created')
 
-
 ## VARIABLES
 
 ndata_day2 = int(len(df)/3)
@@ -165,6 +164,8 @@ day4 = (df2.index.date[0] + timedelta(days=2)).isoformat()
 
 #print("Site = ", site, ", lat = ", lat[site], ", lon = ", lon[site], ", JourJ = ", day2, ", Jour J-1 = ", day1, ", Jour J+1 = ", day3)
 print("Site = ", site, ", lat = ", lat, ", lon = ", lon, ", JourJ = ", day2, ", Jour J-1 = ", day1, ", Jour J+1 = ", day3)
+
+print(df[df.index.date == date.fromisoformat(day2)])
 
 
 ## RENAME COLUMNS TO SIMPLIFY
@@ -292,7 +293,7 @@ if  ((site != "LERWICK,UK") & (warm == True))  :
         else :
             rap2 = np.nan
 
-        if ( (rap1 > 0.5) | ((max_morn > 295 ) & (rap2 > 0.5)) ) :
+        if ( (rap1 > 0.5) | ((max_morn > 300 ) & (rap2 > 0.5)) ) :
             df.FLAG_QC[afternoon & (var_atmo < 500)] = df.FLAG_QC[ afternoon & (var_atmo < 500) ] + 10                 ## valeurs constantes style 500, 300 etc. conf json (avec click c'est possible)
       
         return df
@@ -504,7 +505,7 @@ print('filter Massive Increase/decrease at day done')
 ## WINTER EXTREME POINTS
 
 if ((month2 < 3) | (month2 > 11)) : 
-    df.FLAG_QC[((month2 < 3) | (month2 > 11))  & (df.MLH > 2800)] = df.FLAG_QC[((month2 < 3) | (month2 > 11)) & (df.MLH > 2800)] + 100
+    df.FLAG_QC[((month2 < 3) | (month2 > 11))  & (df.MLH > (0.75*maxmlh))] = df.FLAG_QC[((month2 < 3) | (month2 > 11)) & (df.MLH > (0.75*maxmlh))] + 100
     
 
 ## EXTREME POINTS
@@ -601,31 +602,24 @@ print('filter Residual layer done')
 
 
 
-
-
-
 ## REMERGE WITH 1MIN FREQUENCY
 
-for i in range(len(df[df.index.date == date.fromisoformat(day2)])) :
-        df_day_2.loc[((df_day_2.index.time < df.index.time[i]) & (df_day_2.index.time > df.index.time[i-1])) , 'FLAG_QC'] = df.FLAG_QC[i]
+df_day_2['FLAG_QC'] = 0
+df = df[df.index.date == date.fromisoformat(day2)]
+for i in range(1, len(df)) :
+    df_day_2.loc[((df_day_2.index.time < df.index.time[i]) & (df_day_2.index.time > df.index.time[i-1])) , 'FLAG_QC'] = df.FLAG_QC[i]
 
 df2 = xr.open_dataset(day_2).to_dataframe()
 
 
 ## FINAL DATAFRAME
 
-#df2.loc[[1,], 'FLAG_QC'] = list(df_day_2['FLAG_QC'])
 df2['FLAG_QC'] = list(df_day_2['FLAG_QC'])
 df2['FLAG_QC'] = df2['FLAG_QC'][np.isnan(df2['MLH']) == False]
 df2['MLH'] = df2[df2.FLAG_QC==0]['MLH']
-df2['MLH'] = df2['MLH'].fillna(-999)
-df2['MLH'] = df2['MLH'].astype(np.int32)
-df2['FLAG_QC'] = df2['FLAG_QC'].fillna(-999)
+df2['MLH'].fillna(-999, inplace = True)
+df2['FLAG_QC'].fillna(-999, inplace = True)
 
-
-print(df_day_2)
-print(df2)
-print(len(df_day_2), len(df2))
 
 MLH = xr.DataArray(df2['MLH'].astype(np.int32), coords={"time": ds.time}, dims=["time"]) #, "station"]) 
 MLH.attrs["units"] = "m"
@@ -635,7 +629,7 @@ MLH.attrs["comment"] = "After quality control ; above ground level"
 ds["MLH"] = MLH
 
 
-FLAG_QC = xr.DataArray(df2['FLAG_QC'].astype(np.int32), coords={"time": ds.time}, dims=["time"]) #, "station"])
+FLAG_QC = xr.DataArray(df2['FLAG_QC'], coords={"time": ds.time}, dims=["time"]) #, "station"])
 FLAG_QC.attrs["units"] = '1'
 FLAG_QC.attrs["_FillValue"] = -999
 FLAG_QC.attrs["long_name"] = "flag for MLH after quality control"
