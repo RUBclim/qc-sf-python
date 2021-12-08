@@ -627,7 +627,7 @@ print(df_day_2)
 print(df2)
 print(len(df_day_2), len(df2))
 
-MLH = xr.DataArray(df2['MLH'].astype(np.int32), coords={"time": ds.time}, dims=["time", "station"]) 
+MLH = xr.DataArray(df2['MLH'].astype(np.int32), coords={"time": ds.time}, dims=["time"]) #, "station"]) 
 MLH.attrs["units"] = "m"
 MLH.attrs["_FillValue"] = -999
 MLH.attrs["long_name"] = "mixed layer height"
@@ -635,7 +635,7 @@ MLH.attrs["comment"] = "After quality control ; above ground level"
 ds["MLH"] = MLH
 
 
-FLAG_QC = xr.DataArray(df2['FLAG_QC'].astype(np.int32), coords={"time": ds.time}, dims=["time", "station"])
+FLAG_QC = xr.DataArray(df2['FLAG_QC'].astype(np.int32), coords={"time": ds.time}, dims=["time"]) #, "station"])
 FLAG_QC.attrs["units"] = '1'
 FLAG_QC.attrs["_FillValue"] = -999
 FLAG_QC.attrs["long_name"] = "flag for MLH after quality control"
