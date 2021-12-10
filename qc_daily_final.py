@@ -103,11 +103,14 @@ isFile1, isFile2, isFile3 = os.path.isfile(day_1), os.path.isfile(day_2), os.pat
 
 ## AVERAGE 15 MIN (IN THE END : ADD THE FLAG COLUMN TO 1MIN DS AND FILL NAN WITH LAST VALID FLAG VALUE)
 
-df_day_2 = xr.open_dataset(day_2).to_dataframe()   
-df_day_2 = df_day_2.reset_index(level=0, drop=True)
-
+df_day_2 = xr.open_dataset(day_2).to_dataframe() 
+print(df_day_2)
+df_day_2 = df_day_2.reset_index(level=0, drop=True) 
 df2 = df_day_2.resample("15min").mean()
+df2 = df2[df2.index.date == df2.index.date[0]]
+print(df2)
 df2.index = pd.to_datetime(df2.index.values) + timedelta(minutes=15)
+print(df2)
 df2.index = df2.index.set_names(['time'])
 
 
@@ -121,6 +124,7 @@ df_id.drop(index=df_id.index[0], axis=0, inplace=True)
 if isFile1 == True :
     df1 = xr.open_dataset(day_1).to_dataframe()
     df1 = df1.reset_index(level=0, drop=True)
+    df1 = df1[df1.index.date == df1.index.date[0]]
     df1 = df1.resample("15min").mean()
     df1.index = pd.to_datetime(df1.index.values) + timedelta(minutes=15)
     df1.index = df1.index.set_names(['time'])
@@ -143,7 +147,8 @@ print('complete dataframe created')
 
 ## VARIABLES
 
-ndata_day2 = int(len(df)/3)
+ndata_day2 = len(df2)
+print("ndataday2 = ", ndata_day2)
 month2 = df2.index.month[0]
 warm = (month2 > 2) & (month2 < 10)
 lat = df2.station_latitude[0]
@@ -165,7 +170,6 @@ day4 = (df2.index.date[0] + timedelta(days=2)).isoformat()
 #print("Site = ", site, ", lat = ", lat[site], ", lon = ", lon[site], ", JourJ = ", day2, ", Jour J-1 = ", day1, ", Jour J+1 = ", day3)
 print("Site = ", site, ", lat = ", lat, ", lon = ", lon, ", JourJ = ", day2, ", Jour J-1 = ", day1, ", Jour J+1 = ", day3)
 
-print(df[df.index.date == date.fromisoformat(day2)])
 
 
 ## RENAME COLUMNS TO SIMPLIFY
@@ -181,7 +185,6 @@ date = date(day0.year, day0.month, day0.day)
 sunrise, sunset = [], []
 
 for i in range(5):                                                                                                 ## 5 : because we need SR & SS at day J-2, J-1, J, J+1 et J+2 
-    #schedule = sun.sun_utc(date, lat[site], lon[site])
     schedule = sun.sun_utc(date, lat, lon)                                                             
     
     sunrise1 = (schedule['sunrise'].second + 60*schedule['sunrise'].minute + 3600*schedule['sunrise'].hour)/3600.  ## sunrise in hour
@@ -605,12 +608,14 @@ print('filter Residual layer done')
 ## REMERGE WITH 1MIN FREQUENCY
 
 df_day_2['FLAG_QC'] = 0
+df_day_2 = df_day_2.loc[df_day_2.index.dropna()]
+print(df_day_2.index[len(df_day_2)-5 : len(df_day_2)])
 df = df[df.index.date == date.fromisoformat(day2)]
+
 for i in range(1, len(df)) :
     df_day_2.loc[((df_day_2.index.time < df.index.time[i]) & (df_day_2.index.time > df.index.time[i-1])) , 'FLAG_QC'] = df.FLAG_QC[i]
 
 df2 = xr.open_dataset(day_2).to_dataframe()
-
 
 ## FINAL DATAFRAME
 
