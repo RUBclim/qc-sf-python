@@ -104,13 +104,10 @@ isFile1, isFile2, isFile3 = os.path.isfile(day_1), os.path.isfile(day_2), os.pat
 ## AVERAGE 15 MIN (IN THE END : ADD THE FLAG COLUMN TO 1MIN DS AND FILL NAN WITH LAST VALID FLAG VALUE)
 
 df_day_2 = xr.open_dataset(day_2).to_dataframe() 
-print(df_day_2)
 df_day_2 = df_day_2.reset_index(level=0, drop=True) 
 df2 = df_day_2.resample("15min").mean()
 df2 = df2[df2.index.date == df2.index.date[0]]
-print(df2)
 df2.index = pd.to_datetime(df2.index.values) + timedelta(minutes=15)
-print(df2)
 df2.index = df2.index.set_names(['time'])
 
 
@@ -148,7 +145,6 @@ print('complete dataframe created')
 ## VARIABLES
 
 ndata_day2 = len(df2)
-print("ndataday2 = ", ndata_day2)
 month2 = df2.index.month[0]
 warm = (month2 > 2) & (month2 < 10)
 lat = df2.station_latitude[0]
@@ -613,9 +609,21 @@ print(df_day_2.index[len(df_day_2)-5 : len(df_day_2)])
 df = df[df.index.date == date.fromisoformat(day2)]
 
 for i in range(1, len(df)) :
+    df_day_2.loc[df_day_2.index.dropna()]
     df_day_2.loc[((df_day_2.index.time < df.index.time[i]) & (df_day_2.index.time > df.index.time[i-1])) , 'FLAG_QC'] = df.FLAG_QC[i]
+    #df_day_2.loc[(((~np.isnan(df_day_2.index.time)) < df.index.time[i]) & ((~np.isnan(df_day_2.index.time)) > df.index.time[i-1])) , 'FLAG_QC'] = df.FLAG_QC[i]
+
+
+## sur le dataset directement : 
+##npisnan pius isel
+##decode cf = false
+##ncnumtodate 
+
 
 df2 = xr.open_dataset(day_2).to_dataframe()
+#test = len(df2) - len(df_day_2)
+df2 = df2[0: len(df_day_2)]
+print('len df_day_2 = ', len(df_day_2), 'len(df2) = ', len(df2))
 
 ## FINAL DATAFRAME
 
@@ -626,19 +634,21 @@ df2['MLH'].fillna(-999, inplace = True)
 df2['FLAG_QC'].fillna(-999, inplace = True)
 
 
-MLH = xr.DataArray(df2['MLH'].astype(np.int32), coords={"time": ds.time}, dims=["time"]) #, "station"]) 
+MLH = xr.DataArray(df2['MLH'], coords={"time": ds.time}, dims=["time"]) #, "station"]) 
 MLH.attrs["units"] = "m"
-MLH.attrs["_FillValue"] = -999
+#MLH.encoding["_FillValue"] = -999
 MLH.attrs["long_name"] = "mixed layer height"
 MLH.attrs["comment"] = "After quality control ; above ground level"
 ds["MLH"] = MLH
 
+ds["precip_FLAG"] = ds["FLAG"]
+ds = ds.drop(['FLAG']) 
 
-FLAG_QC = xr.DataArray(df2['FLAG_QC'], coords={"time": ds.time}, dims=["time"]) #, "station"])
+FLAG_QC = xr.DataArray(df2['FLAG_QC'].astype(np.int32), coords={"time": ds.time}, dims=["time"]) #, "station"])
 FLAG_QC.attrs["units"] = '1'
-FLAG_QC.attrs["_FillValue"] = -999
+FLAG_QC.encoding["_FillValue"] = -999
 FLAG_QC.attrs["long_name"] = "flag for MLH after quality control"
-ds["FLAG_QC"] = FLAG_QC
+ds["FLAG"] = FLAG_QC
 
 ds.attrs['comment'] = "Mixed layer height after quality control"
 
@@ -652,8 +662,18 @@ print("MLH replaced, FLAG added, History added")
 
 ## CREATE NETCDF L2B
 
+#encoded = {'time':{'units': "days since 1970-01-01 00:00:00 UTC".format(day2), 'calendar' : 'standard', "dtype": "double", '_FillValue': 
+#None}} 
+test =  xr.open_dataset(day_2)
+encoded = {'time':{'calendar' : 'standard', "dtype": "double", '_FillValue': None, 'units' : test['time'].encoding['units'] + 'UTC'}} 
 
-ds.to_netcdf(sys.argv[5], encoding={'time':{'units': "minutes since {0} 00:00:00 UTC".format(day2), 'calendar' : 'standard', "dtype": "double", '_FillValue': None} }, mode = "w", engine='netcdf4')  ## argv[5] idem que les autres arg
+#encoded['time'] = {'units' : test['time'].encoding['units']}
+encoded['MLH'] = {'dtype' : test['MLH'].encoding['dtype'], '_FillValue' : -999}
+
+print(encoded)
+
+ds.transpose("time", "station") #, "wigos_len", "name_len")
+ds.to_netcdf(sys.argv[5], encoding=encoded, mode = "w", engine='netcdf4')  ## argv[5] idem que les autres arg
 
 print("output file created")
 
