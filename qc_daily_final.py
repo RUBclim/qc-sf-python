@@ -142,9 +142,12 @@ df = pd.concat([df1, df2, df3])
 df = pd.merge(df, df_id, how = "right", right_index=True, left_index = True)
 print('complete dataframe created')
 
+print(df1, df2, df3, df)
+print(len(df1), len(df2), len(df3), len(df))
+
 ## VARIABLES
 
-ndata_day2 = len(df2)
+ndata_day2 = int(len(df)/3)
 month2 = df2.index.month[0]
 warm = (month2 > 2) & (month2 < 10)
 lat = df2.station_latitude[0]
@@ -639,6 +642,7 @@ MLH.attrs["units"] = "m"
 #MLH.encoding["_FillValue"] = -999
 MLH.attrs["long_name"] = "mixed layer height"
 MLH.attrs["comment"] = "After quality control ; above ground level"
+print(type(MLH))
 ds["MLH"] = MLH
 
 ds["precip_FLAG"] = ds["FLAG"]
