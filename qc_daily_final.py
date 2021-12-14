@@ -142,8 +142,7 @@ df = pd.concat([df1, df2, df3])
 df = pd.merge(df, df_id, how = "right", right_index=True, left_index = True)
 print('complete dataframe created')
 
-print(df1, df2, df3, df)
-print(len(df1), len(df2), len(df3), len(df))
+
 
 ## VARIABLES
 
@@ -608,24 +607,18 @@ print('filter Residual layer done')
 
 df_day_2['FLAG_QC'] = 0
 df_day_2 = df_day_2.loc[df_day_2.index.dropna()]
-print(df_day_2.index[len(df_day_2)-5 : len(df_day_2)])
 df = df[df.index.date == date.fromisoformat(day2)]
 
 for i in range(1, len(df)) :
-    df_day_2.loc[df_day_2.index.dropna()]
     df_day_2.loc[((df_day_2.index.time < df.index.time[i]) & (df_day_2.index.time > df.index.time[i-1])) , 'FLAG_QC'] = df.FLAG_QC[i]
-    #df_day_2.loc[(((~np.isnan(df_day_2.index.time)) < df.index.time[i]) & ((~np.isnan(df_day_2.index.time)) > df.index.time[i-1])) , 'FLAG_QC'] = df.FLAG_QC[i]
 
-
-## sur le dataset directement : 
-##npisnan pius isel
-##decode cf = false
-##ncnumtodate 
-
+x = ~np.isnan(ds['time'])
+new_time = {'time' : x}
+ds = ds.isel(new_time)
 
 df2 = xr.open_dataset(day_2).to_dataframe()
-#test = len(df2) - len(df_day_2)
-df2 = df2[0: len(df_day_2)]
+df2 = df2.loc[df2.index.dropna()]
+
 print('len df_day_2 = ', len(df_day_2), 'len(df2) = ', len(df2))
 
 ## FINAL DATAFRAME
