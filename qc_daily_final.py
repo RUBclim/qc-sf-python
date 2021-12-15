@@ -621,6 +621,9 @@ df2 = df2.loc[df2.index.dropna()]
 
 print('len df_day_2 = ', len(df_day_2), 'len(df2) = ', len(df2))
 
+
+
+
 ## FINAL DATAFRAME
 
 df2['FLAG_QC'] = list(df_day_2['FLAG_QC'])
@@ -630,9 +633,8 @@ df2['MLH'].fillna(-999, inplace = True)
 df2['FLAG_QC'].fillna(-999, inplace = True)
 
 
-MLH = xr.DataArray(df2['MLH'], coords={"time": ds.time}, dims=["time"]) #, "station"]) 
+MLH = xr.DataArray(df2['MLH'], coords={"time": ds.time}, dims=["time"])#, "station"]) 
 MLH.attrs["units"] = "m"
-#MLH.encoding["_FillValue"] = -999
 MLH.attrs["long_name"] = "mixed layer height"
 MLH.attrs["comment"] = "After quality control ; above ground level"
 print(type(MLH))
@@ -657,20 +659,15 @@ ds.attrs['history'] = f"Git repository : git@gitlab.in2p3.fr:mvanhove/qc-sf-pyth
 print("MLH replaced, FLAG added, History added")
 
 
+
+
 ## CREATE NETCDF L2B
 
-#encoded = {'time':{'units': "days since 1970-01-01 00:00:00 UTC".format(day2), 'calendar' : 'standard', "dtype": "double", '_FillValue': 
-#None}} 
 test =  xr.open_dataset(day_2)
 encoded = {'time':{'calendar' : 'standard', "dtype": "double", '_FillValue': None, 'units' : test['time'].encoding['units'] + 'UTC'}} 
-
-#encoded['time'] = {'units' : test['time'].encoding['units']}
 encoded['MLH'] = {'dtype' : test['MLH'].encoding['dtype'], '_FillValue' : -999}
-
-print(encoded)
-
-ds.transpose("time", "station") #, "wigos_len", "name_len")
-ds.to_netcdf(sys.argv[5], encoding=encoded, mode = "w", engine='netcdf4')  ## argv[5] idem que les autres arg
+ds.transpose("time", "station") 
+ds.to_netcdf(sys.argv[5], encoding=encoded, mode = "w", engine='netcdf4') 
 
 print("output file created")
 
