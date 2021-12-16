@@ -101,10 +101,16 @@ site = ds.__dict__['site_location']              ## site name given in J file
 isFile1, isFile2, isFile3 = os.path.isfile(day_1), os.path.isfile(day_2), os.path.isfile(day_3)
 
 
-## AVERAGE 15 MIN (IN THE END : ADD THE FLAG COLUMN TO 1MIN DS AND FILL NAN WITH LAST VALID FLAG VALUE)
+## DATAFRAME PREPARED FOR THE END
 
 df_day_2 = xr.open_dataset(day_2).to_dataframe() 
 df_day_2 = df_day_2.reset_index(level=0, drop=True) 
+df_day_2 = df_day_2[~df_day_2.index.duplicated(keep='first')]
+df_day_2 = df_day_2.loc[df_day_2.index.dropna()]
+print(df_day_2.index.duplicated())
+
+## AVERAGE 15 MIN (IN THE END : ADD THE FLAG COLUMN TO 1MIN DS AND FILL NAN WITH LAST VALID FLAG VALUE)
+
 df2 = df_day_2.resample("15min").mean()
 df2 = df2[df2.index.date == df2.index.date[0]]
 df2.index = pd.to_datetime(df2.index.values) + timedelta(minutes=15)
@@ -155,6 +161,16 @@ lon = df2.station_longitude[0]
 ## DATASET FOR OUTPUT FILE 
 
 ds = xr.open_dataset(day_2)
+
+
+## REMOVE NAN AND DUPLICATED TIMES IN DATASET
+
+x = ~np.isnan(ds['time'])
+new_time = {'time' : x}
+ds = ds.isel(new_time)
+
+_, index = np.unique(ds['time'], return_index=True)
+ds = ds.isel(time=index)
 
 
 ## INFORMATION MESSAGE 
@@ -606,18 +622,14 @@ print('filter Residual layer done')
 ## REMERGE WITH 1MIN FREQUENCY
 
 df_day_2['FLAG_QC'] = 0
-df_day_2 = df_day_2.loc[df_day_2.index.dropna()]
 df = df[df.index.date == date.fromisoformat(day2)]
-
 for i in range(1, len(df)) :
     df_day_2.loc[((df_day_2.index.time < df.index.time[i]) & (df_day_2.index.time > df.index.time[i-1])) , 'FLAG_QC'] = df.FLAG_QC[i]
 
-x = ~np.isnan(ds['time'])
-new_time = {'time' : x}
-ds = ds.isel(new_time)
 
 df2 = xr.open_dataset(day_2).to_dataframe()
 df2 = df2.loc[df2.index.dropna()]
+df2 = df2[~df2.index.duplicated(keep='first')]
 
 print('len df_day_2 = ', len(df_day_2), 'len(df2) = ', len(df2))
 
@@ -632,22 +644,22 @@ df2['MLH'] = df2[df2.FLAG_QC==0]['MLH']
 df2['MLH'].fillna(-999, inplace = True)
 df2['FLAG_QC'].fillna(-999, inplace = True)
 
-
-MLH = xr.DataArray(df2['MLH'], coords={"time": ds.time}, dims=["time"])#, "station"]) 
+MLH = df2['MLH'].to_xarray()
 MLH.attrs["units"] = "m"
 MLH.attrs["long_name"] = "mixed layer height"
-MLH.attrs["comment"] = "After quality control ; above ground level"
-print(type(MLH))
+MLH.attrs["comment"] = "After quality control ; above ground level" 
 ds["MLH"] = MLH
+ds['MLH'] = ds['MLH'].transpose("time", "station")
 
 ds["precip_FLAG"] = ds["FLAG"]
 ds = ds.drop(['FLAG']) 
 
-FLAG_QC = xr.DataArray(df2['FLAG_QC'].astype(np.int32), coords={"time": ds.time}, dims=["time"]) #, "station"])
+FLAG_QC = df2['FLAG_QC'].to_xarray()
 FLAG_QC.attrs["units"] = '1'
 FLAG_QC.encoding["_FillValue"] = -999
 FLAG_QC.attrs["long_name"] = "flag for MLH after quality control"
-ds["FLAG"] = FLAG_QC
+ds["FLAG_QC"] = FLAG_QC
+ds['FLAG_QC'] = ds['FLAG_QC'].transpose("time", "station")
 
 ds.attrs['comment'] = "Mixed layer height after quality control"
 
@@ -663,10 +675,11 @@ print("MLH replaced, FLAG added, History added")
 
 ## CREATE NETCDF L2B
 
-test =  xr.open_dataset(day_2)
-encoded = {'time':{'calendar' : 'standard', "dtype": "double", '_FillValue': None, 'units' : test['time'].encoding['units'] + 'UTC'}} 
-encoded['MLH'] = {'dtype' : test['MLH'].encoding['dtype'], '_FillValue' : -999}
-ds.transpose("time", "station") 
+ds2 =  xr.open_dataset(day_2)
+encoded = {'time':{'calendar' : 'standard', "dtype": "double", '_FillValue': None, 'units' : ds2['time'].encoding['units'] + 'UTC'}} 
+encoded['MLH'] = {'dtype' : ds2['MLH'].encoding['dtype'], '_FillValue' : -999}
+ds = ds.sel(time=slice(day2, day2))
+ds = ds.transpose("time", "station") 
 ds.to_netcdf(sys.argv[5], encoding=encoded, mode = "w", engine='netcdf4') 
 
 print("output file created")
