@@ -16,19 +16,16 @@ from solartime import SolarTime
 
 ## ARGUMENTS : L2A,  L2B, SITE, FICHIER DE SORTIE QL 
 
-l2a = sys.argv[1]
-l2b = sys.argv[2]					#+ ajouter décorateur (@) qui décrivent arguments de la fonction : voir lien slack
+l2a = sys.argv[1]  
+l2b = sys.argv[1]  			#+ ajouter décorateur (@) qui décrivent arguments de la fonction : voir lien slack
 output = sys.argv[3]
 
 isFile1 = os.path.isfile(l2a)
 isFile2 = os.path.isfile(l2b)   ## vérif de si fichier existe ok, mais est-il lisible, etc.. ? => module click : créer fonction qui prend en argument les 
-
-
-
+ds = nc.Dataset(l2a)	
 
 ## CONFIGURATION
 
-ds = nc.Dataset(l2a)
 site = ds.__dict__['site_location'] 
 
 ## PLOT
@@ -41,8 +38,8 @@ if (isFile1 == True) & (isFile2 == True) :
     df1 = df1.reset_index(level=0, drop=True) 
     df2 = xr.open_dataset(l2b).to_dataframe()
     df2 = df2.reset_index(level=0, drop=True)
-    lat = l2a.station_latitude[0]
-    lon = l2a.station_longitude[0] 
+    lat = df1.station_latitude[0]
+    lon = df1.station_longitude[0] 
     sun = SolarTime()
 
     date = date(df1.index.year[0], df1.index.month[0], df1.index.day[0])
