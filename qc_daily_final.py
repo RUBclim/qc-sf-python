@@ -640,7 +640,7 @@ print('len df_day_2 = ', len(df_day_2), 'len(df2) = ', len(df2))
 df2['FLAG_QC'] = list(df_day_2['FLAG_QC'].astype(int))
 df2['FLAG_QC'] = df2['FLAG_QC'][np.isnan(df2['MLH']) == False]
 df2['MLH'] = df2[df2.FLAG_QC==0]['MLH']
-#df2['MLH'].fillna(-999, inplace = True)
+df2['MLH'].fillna(-999, inplace = True)
 df2['FLAG_QC'].fillna(-999, inplace = True)
 
 MLH = df2['MLH'].to_xarray()
@@ -691,8 +691,10 @@ def get_encoding(ds):
 
 ds2 =  xr.open_dataset(day_2)
 ds2_enco = get_encoding(ds2)
-#encoded = {'time':{'calendar' : 'standard', "dtype": "double", '_FillValue': None, 'units' : ds2['time'].encoding['units'] + 'UTC'}} 
-#encoded['MLH'] = {'dtype' : ds2['MLH'].encoding['dtype'], '_FillValue' : -999}
+ds2_enco['time'] = {'calendar' : 'standard', "dtype": "double", '_FillValue': None, 'units' : ds2['time'].encoding['units'] + 'UTC'} # 'long_name' : 'time'}
+ds['time'].attrs['long_name'] = 'time'
+#ds2_enco['time'] = {'units' : ds2['time'].encoding['units'] + 'UTC'}#, 'long_name' : 'time'} 
+ds2_enco['MLH'] = {'dtype' : ds2['MLH'].encoding['dtype'], '_FillValue' : "-999"}
 ds2_enco['FLAG'] = {'_FillValue' : -999} 
 ds = ds.sel(time=slice(day2, day2))
 ds = ds.transpose("time", "station") 
