@@ -671,13 +671,32 @@ print("MLH replaced, FLAG added, History added")
 
 ## CREATE NETCDF L2B
 
+def get_encoding(ds):
+    """[get the encoding dictionary ]
+
+    Args:
+        ds ([xr.dataset]): [dataset opened ]
+
+    Returns:
+        [dict]: [dictionary containing the encoding]
+    """    
+    
+    list_var = list(ds.keys())
+    list_dim = list(ds.coords)
+    list_var_dim = list_var + list_dim
+    encoded = {}
+    for elem in list_var_dim:
+        encoded[elem]=ds[elem].encoding
+    return encoded
+
 ds2 =  xr.open_dataset(day_2)
-encoded = {'time':{'calendar' : 'standard', "dtype": "double", '_FillValue': None, 'units' : ds2['time'].encoding['units'] + 'UTC'}} 
-encoded['MLH'] = {'dtype' : ds2['MLH'].encoding['dtype'], '_FillValue' : -999}
-encoded['FLAG'] = {'_FillValue' : -999} 
+ds2_enco = get_encoding(ds2)
+#encoded = {'time':{'calendar' : 'standard', "dtype": "double", '_FillValue': None, 'units' : ds2['time'].encoding['units'] + 'UTC'}} 
+#encoded['MLH'] = {'dtype' : ds2['MLH'].encoding['dtype'], '_FillValue' : -999}
+ds2_enco['FLAG'] = {'_FillValue' : -999} 
 ds = ds.sel(time=slice(day2, day2))
 ds = ds.transpose("time", "station") 
-ds.to_netcdf(sys.argv[5], encoding=encoded, mode = "w", engine='netcdf4') 
+ds.to_netcdf(sys.argv[5], encoding=ds2_enco, mode = "w", engine='netcdf4') 
 
 print("output file created")
 
