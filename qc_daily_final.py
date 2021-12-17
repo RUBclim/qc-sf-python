@@ -107,7 +107,6 @@ df_day_2 = xr.open_dataset(day_2).to_dataframe()
 df_day_2 = df_day_2.reset_index(level=0, drop=True) 
 df_day_2 = df_day_2[~df_day_2.index.duplicated(keep='first')]
 df_day_2 = df_day_2.loc[df_day_2.index.dropna()]
-print(df_day_2.index.duplicated())
 
 ## AVERAGE 15 MIN (IN THE END : ADD THE FLAG COLUMN TO 1MIN DS AND FILL NAN WITH LAST VALID FLAG VALUE)
 
@@ -638,10 +637,10 @@ print('len df_day_2 = ', len(df_day_2), 'len(df2) = ', len(df2))
 
 ## FINAL DATAFRAME
 
-df2['FLAG_QC'] = list(df_day_2['FLAG_QC'])
+df2['FLAG_QC'] = list(df_day_2['FLAG_QC'].astype(int))
 df2['FLAG_QC'] = df2['FLAG_QC'][np.isnan(df2['MLH']) == False]
 df2['MLH'] = df2[df2.FLAG_QC==0]['MLH']
-df2['MLH'].fillna(-999, inplace = True)
+#df2['MLH'].fillna(-999, inplace = True)
 df2['FLAG_QC'].fillna(-999, inplace = True)
 
 MLH = df2['MLH'].to_xarray()
@@ -652,13 +651,11 @@ ds["MLH"] = MLH
 ds['MLH'] = ds['MLH'].transpose("time", "station")
 
 ds = ds.rename({"FLAG" : "precip_FLAG"})
-
-FLAG_QC = df2['FLAG_QC'].to_xarray()
+FLAG_QC = df2['FLAG_QC'].astype(np.int32).to_xarray()
 FLAG_QC.attrs["units"] = '1'
-FLAG_QC.encoding["_FillValue"] = -999
 FLAG_QC.attrs["long_name"] = "flag for MLH after quality control"
-ds["FLAG"] = FLAG_QC
-ds['FLAG'] = ds['FLAG'].transpose("time", "station")
+#ds["FLAG"] = FLAG_QC
+ds['FLAG'] = FLAG_QC.transpose("time", "station")
 
 ds.attrs['comment'] = "Mixed layer height after quality control"
 
@@ -677,6 +674,7 @@ print("MLH replaced, FLAG added, History added")
 ds2 =  xr.open_dataset(day_2)
 encoded = {'time':{'calendar' : 'standard', "dtype": "double", '_FillValue': None, 'units' : ds2['time'].encoding['units'] + 'UTC'}} 
 encoded['MLH'] = {'dtype' : ds2['MLH'].encoding['dtype'], '_FillValue' : -999}
+encoded['FLAG'] = {'_FillValue' : -999} 
 ds = ds.sel(time=slice(day2, day2))
 ds = ds.transpose("time", "station") 
 ds.to_netcdf(sys.argv[5], encoding=encoded, mode = "w", engine='netcdf4') 

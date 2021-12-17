@@ -11,58 +11,45 @@ import matplotlib.dates as mdates
 
 ## ARGUMENTS : L2A,  L2B, SITE, FICHIER DE SORTIE QL 
 
-isFile1 = os.path.isfile(sys.argv[1])
-isFile2 = os.path.isfile(sys.argv[2])   ## vérif de si fichier existe ok, mais est-il lisible, etc.. ? => module click : créer fonction qui prend en argument les 
-					#+ ajouter décorateur (@) qui décrivent arguments de la fonction : voir lien slack 
-site = str(sys.argv[3])
-output = sys.argv[4]
+l2a = sys.argv[1]
+l2b = sys.argv[2]					#+ ajouter décorateur (@) qui décrivent arguments de la fonction : voir lien slack
+output = sys.argv[3]
+
+isFile1 = os.path.isfile(l2a)
+isFile2 = os.path.isfile(l2b)   ## vérif de si fichier existe ok, mais est-il lisible, etc.. ? => module click : créer fonction qui prend en argument les 
 
 
 
 
 ## CONFIGURATION
 
-lat = {"palaiseau": 48.714509, "payerne": 46.8220266, "libus" : 50.0755381, 
-           "karlov" : 49.384900, "helsinki" : 60.2058, "vuosaari" : 60.2058, "lerwick" : 60.152988,
-             "orly" :  48.7145, "roissy" :  48.7145, "universitedeparis" :  48.7145, "cdg" :  48.7145}
-
-lon = {"palaiseau": 2.245748, "payerne": 6.9405663, "libus" : 14.4378005, 
-           "karlov" : 15.545200, "helsinki" : 24.9542, "vuosaari" : 24.9542, "lerwick" : -1.149293,
-              "orly" : 2.245748, "roissy" : 2.245748, "universitedeparis" : 2.245748, "cdg" : 2.245748}
-
-
-
+ds = nc.Dataset(l2a)
+site = ds.__dict__['site_location'] 
 
 ## PLOT
 
 if (isFile1 == True) & (isFile2 == True) :
-
-    #fig, ax = plt.subplots(1, 1)	
+	
     plt.figure(figsize=(20, 10))
     ax = plt.gca()
-    df1 = xr.open_dataset(sys.argv[1]).to_dataframe()
+    df1 = xr.open_dataset(l2a).to_dataframe()
     df1 = df1.reset_index(level=0, drop=True) 
-    df2 = xr.open_dataset(sys.argv[2]).to_dataframe()
-    df2 = df2.reset_index(level=0, drop=True) 
+    df2 = xr.open_dataset(l2b).to_dataframe()
+    df2 = df2.reset_index(level=0, drop=True)
+    lat = l2a.station_latitude[0]
+    lon = l2a.station_longitude[0] 
     sun = SolarTime()
 
     date = date(df1.index.year[0], df1.index.month[0], df1.index.day[0])
-    schedule = sun.sun_utc(date, lat[site], lon[site]) 
+    schedule = sun.sun_utc(date, lat, lon) 
     ss = schedule['sunset']
-    sr = schedule['sunrise']
-
-    #print(sr)
-    			
+    sr = schedule['sunrise']	
     
     x = df1.index.to_list()
-    #xday = df1.index.date[0]
     y = df1.MLH
     y2 = df2.MLH
   
-
-    #plt.plot(x, y,  'co', markersize = 4, label = "Data removed")
     df1['MLH'].plot(x_compat=True, ax=ax, marker = '.', markersize = 10, color = 'grey', label = "Data removed")
-    #plt.plot(x, y2, 'yo',  markersize = 4, label = "Data kept")
     df2['MLH'].plot(x_compat=True, ax=ax, marker = '.', markersize = 10, color = 'limegreen', label = "Data kept")
 
     ax.xaxis.set_major_locator(mdates.DayLocator())
@@ -96,4 +83,4 @@ if (isFile1 == True) & (isFile2 == True) :
     plt.savefig(output)
 
 else :
-    print('error with files')
+    print('error with the files')
