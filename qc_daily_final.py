@@ -651,15 +651,14 @@ MLH.attrs["comment"] = "After quality control ; above ground level"
 ds["MLH"] = MLH
 ds['MLH'] = ds['MLH'].transpose("time", "station")
 
-ds["precip_FLAG"] = ds["FLAG"]
-ds = ds.drop(['FLAG']) 
+ds = ds.rename({"FLAG" : "precip_FLAG"})
 
 FLAG_QC = df2['FLAG_QC'].to_xarray()
 FLAG_QC.attrs["units"] = '1'
 FLAG_QC.encoding["_FillValue"] = -999
 FLAG_QC.attrs["long_name"] = "flag for MLH after quality control"
-ds["FLAG_QC"] = FLAG_QC
-ds['FLAG_QC'] = ds['FLAG_QC'].transpose("time", "station")
+ds["FLAG"] = FLAG_QC
+ds['FLAG'] = ds['FLAG'].transpose("time", "station")
 
 ds.attrs['comment'] = "Mixed layer height after quality control"
 
