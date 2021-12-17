@@ -2,12 +2,17 @@
 
 import os
 import sys
+
 from matplotlib import figure
-from datetime import date, timedelta 
+from datetime import date 
+
 import xarray as xr
-from solartime import SolarTime
+import netCDF4 as nc
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
+
+from solartime import SolarTime
+
 
 ## ARGUMENTS : L2A,  L2B, SITE, FICHIER DE SORTIE QL 
 
@@ -67,7 +72,6 @@ if (isFile1 == True) & (isFile2 == True) :
     plt.vlines(ss, 0, 4000, 'k', label = 'Sunset')
 
     plt.yticks(fontsize = 20)
-    #plt.xlabel("Date", fontsize = 20)
     plt.ylabel("MLH (m)", fontsize = 20)
     plt.title(f"Mixed layer height after quality control - STRATfinder - {site}" , fontsize = 20, y = 1.1)
 
