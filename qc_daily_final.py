@@ -267,8 +267,8 @@ df.insert(5, 'FLAG_QC', 0)
 df['MLH'] = np.where(df.prof > 0,np.nan,df.MLH)
 prof = (df.prof > 0).sum()
 
-df2 = df[df['time_relSR']<1].groupby('day', as_index=False).agg(profn = ("prof",  lambda x : (pd.to_numeric(x)>10).sum()))   ## profn = nombre de fois où prof est > 10, par nuit
-df3 = df[df['time_relSR']>-1].groupby('day', as_index=False).agg(profd = ("prof",  lambda x : (pd.to_numeric(x)>10).sum()))  ## profd = nombre de fois où prof est > 10, par jour
+df2 = df[df['time_relSR']<1].groupby('day', as_index=False).agg(profn = ("prof",  lambda x : (pd.to_numeric(x)>0.1).sum()))   ## profn = nombre de fois où prof est > 10, par nuit
+df3 = df[df['time_relSR']>-1].groupby('day', as_index=False).agg(profd = ("prof",  lambda x : (pd.to_numeric(x)>0.1).sum()))  ## profd = nombre de fois où prof est > 10, par jour
 df = df.reset_index().merge(df2, how="left").set_index('time')                                                               ## les valeurs de profn sont rajoutées à df
 df = df.reset_index().merge(df3, how="left").set_index('time')                                                               ## les valeurs de profd sont rajoutées à df
 df.FLAG_QC[(df.profd >= 12) & (df.time_relSR>-1)] = df.FLAG_QC + 1                                                                 ## si profd >= 12 dans un même jour, le jour est flaggué
