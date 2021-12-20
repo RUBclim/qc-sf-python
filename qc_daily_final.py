@@ -651,6 +651,9 @@ ds["MLH"] = MLH
 ds['MLH'] = ds['MLH'].transpose("time", "station")
 
 ds = ds.rename({"FLAG" : "precip_FLAG"})
+ds.precip_FLAG.attrs["units"] = 'range between 0 and 1'
+#print(ds['precip_FLAG']) #= 100*np.array(ds['precip_FLAG'])
+#print(ds.precip_FLAG.apply(lambda x : 100*x))
 FLAG_QC = df2['FLAG_QC'].astype(np.int32).to_xarray()
 FLAG_QC.attrs["units"] = '1'
 FLAG_QC.attrs["long_name"] = "flag for MLH after quality control"
@@ -693,9 +696,8 @@ ds2 =  xr.open_dataset(day_2)
 ds2_enco = get_encoding(ds2)
 ds2_enco['time'] = {'calendar' : 'standard', "dtype": "double", '_FillValue': None, 'units' : ds2['time'].encoding['units'] + 'UTC'} # 'long_name' : 'time'}
 ds['time'].attrs['long_name'] = 'time'
-#ds2_enco['time'] = {'units' : ds2['time'].encoding['units'] + 'UTC'}#, 'long_name' : 'time'} 
 ds2_enco['MLH'] = {'dtype' : ds2['MLH'].encoding['dtype'], '_FillValue' : "-999"}
-ds2_enco['FLAG'] = {'_FillValue' : -999} 
+ds2_enco['FLAG'] = {'_FillValue' : -999}  
 ds = ds.sel(time=slice(day2, day2))
 ds = ds.transpose("time", "station") 
 ds.to_netcdf(sys.argv[5], encoding=ds2_enco, mode = "w", engine='netcdf4') 
