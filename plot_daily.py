@@ -42,7 +42,7 @@ if (isFile1 == True) & (isFile2 == True) :
     lon = df1.station_longitude[0] 
     sun = SolarTime()
 
-    date = date(df1.index.year[0], df1.index.month[0], df1.index.day[0])
+    date = date(int(df1.index.year[0]), int(df1.index.month[0]), int(df1.index.day[0]))
     schedule = sun.sun_utc(date, lat, lon) 
     ss = schedule['sunset']
     sr = schedule['sunrise']	
