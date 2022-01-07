@@ -17,7 +17,7 @@ from solartime import SolarTime
 ## ARGUMENTS : L2A,  L2B, SITE, FICHIER DE SORTIE QL 
 
 l2a = sys.argv[1]  
-l2b = sys.argv[1]  			#+ ajouter décorateur (@) qui décrivent arguments de la fonction : voir lien slack
+l2b = sys.argv[2]  			#+ ajouter décorateur (@) qui décrivent arguments de la fonction : voir lien slack
 output = sys.argv[3]
 
 isFile1 = os.path.isfile(l2a)
@@ -47,10 +47,10 @@ if (isFile1 == True) & (isFile2 == True) :
     ss = schedule['sunset']
     sr = schedule['sunrise']	
     
-    x = df1.index.to_list()
+    x = df2.index.to_list()
     y = df1.MLH
     y2 = df2.MLH
-  
+    print(x)
     df1['MLH'].plot(x_compat=True, ax=ax, marker = '.', markersize = 10, color = 'grey', label = "Data removed")
     df2['MLH'].plot(x_compat=True, ax=ax, marker = '.', markersize = 10, color = 'limegreen', label = "Data kept")
 
@@ -71,8 +71,9 @@ if (isFile1 == True) & (isFile2 == True) :
     plt.yticks(fontsize = 20)
     plt.ylabel("MLH (m)", fontsize = 20)
     plt.title(f"Mixed layer height after quality control - STRATfinder - {site}" , fontsize = 20, y = 1.1)
-
+    #print('x[0] = ', x[0], 'SR =', sr)
     plt.fill_betweenx([0,4000], x[0], sr, alpha=0.1, color = 'skyblue')
+    #print('x = ', x, ' x[len(x)-1] = ',  x[len(x)-1], 'SS =', ss)
     plt.fill_betweenx([0,4000], ss, x[len(x)-1], alpha=0.1, color = 'skyblue')
 
     plt.ylim([0,4000])

@@ -47,7 +47,7 @@ if (isFile1 == True) & (isFile2 == True) :
     ss = schedule['sunset']
     sr = schedule['sunrise']	
     
-    x = df1.index.to_list()
+    x = df2.index.to_list()
     y = df1.MLH
     y2 = df2.MLH
   
