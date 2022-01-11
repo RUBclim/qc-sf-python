@@ -663,7 +663,9 @@ ds['FLAG'] = FLAG_QC.transpose("time", "station")
 ds.attrs['comment'] = "Mixed layer height after quality control"
 
 
-repo = git.Repo('/home/mvanhove/STRATfinder/scripts/qc-sf-python/')
+#repo = git.Repo('/home/mvanhove/STRATfinder/scripts/qc-sf-python/')
+dir_path = os.path.dirname(os.path.realpath(f'{sys.argv[0]}'))
+repo = git.Repo(f'{dir_path}')
 sha = repo.head.commit.hexsha
 ds.attrs['history'] = f"Git repository : git@gitlab.in2p3.fr:mvanhove/qc-sf-python.git  ;  Version of quality control code : {sha}"
                                 

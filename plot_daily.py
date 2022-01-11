@@ -41,6 +41,7 @@ if (isFile1 == True) & (isFile2 == True) :
     lat = df1.station_latitude[0]
     lon = df1.station_longitude[0] 
     sun = SolarTime()
+    
 
     date = date(int(df1.index.year[0]), int(df1.index.month[0]), int(df1.index.day[0]))
     schedule = sun.sun_utc(date, lat, lon) 
@@ -50,9 +51,10 @@ if (isFile1 == True) & (isFile2 == True) :
     x = df2.index.to_list()
     y = df1.MLH
     y2 = df2.MLH
-    print(x)
-    df1['MLH'].plot(x_compat=True, ax=ax, marker = '.', markersize = 10, color = 'grey', label = "Data removed")
-    df2['MLH'].plot(x_compat=True, ax=ax, marker = '.', markersize = 10, color = 'limegreen', label = "Data kept")
+    
+    
+    df1['MLH'].plot(x_compat=True, ax=ax, style = '.', markersize = 10, color = 'grey', label = "Data removed")
+    df2['MLH'].plot(x_compat=True, ax=ax, style='.', markersize = 10, color = 'limegreen', label = "Data kept")
 
     ax.xaxis.set_major_locator(mdates.DayLocator())
     ax.xaxis.set_major_formatter(mdates.DateFormatter('%d/%m/%y'))
