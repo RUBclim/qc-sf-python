@@ -284,37 +284,35 @@ print('filter Rain done')
 
 if  ((site != "LERWICK,UK") & (warm == True))  :
     
-    def stuck_mlh(df, var_atmo) :
+    def stuck_mlh(df, var_atmo, time_relSR) :
         
         d = (df.day==2)
-        afternoon = (df.time_relSR > 5) & d
 
-        day_time1 = (df.time_relSR >= 5) & d
-        n_inf_300 = (day_time1 & (var_atmo < 300)).sum() 
-        val_mlh1 = (day_time1 & (var_atmo > 0)).sum()
+        daytime = (time_relSR > 5) & d
+        n_inf_300 = (daytime & (var_atmo < 300)).sum() 
+        val_mlh1 = (daytime & (var_atmo > 0)).sum()
         if val_mlh1 != 0 :
             rap1 = n_inf_300/val_mlh1
         else :
             rap1 = np.nan  
 
 
-        morn_time = (df.time_relSR >0) & (df.time_relSR < 5) & d 
-        max_morn = var_atmo[morn_time].max()  
+        morning = (time_relSR >0) & (time_relSR <= 5) & d 
+        max_morn = var_atmo[morning].max()  
     
-        day_time2 = (df.time_relSR > 7) & d  
-        n_inf_500 = (day_time2 & (var_atmo < 500)).sum() 
-        val_mlh2 = (day_time2 & (var_atmo > 0)).sum()
+        afternoon = (time_relSR > 7) & d
+        n_inf_500 = (afternoon & (var_atmo < 500)).sum() 
+        val_mlh2 = (afternoon & (var_atmo > 0)).sum()
         if val_mlh2 != 0 :
             rap2 = n_inf_500/val_mlh2
         else :
             rap2 = np.nan
 
         if ( (rap1 > 0.5) | ((max_morn > 300 ) & (rap2 > 0.5)) ) :
-            df.FLAG_QC[afternoon & (var_atmo < 500)] = df.FLAG_QC[ afternoon & (var_atmo < 500) ] + 10                 ## valeurs constantes style 500, 300 etc. conf json (avec click c'est possible)
-      
+            df.FLAG_QC[daytime & (var_atmo < 500)] = df.FLAG_QC[ daytime & (var_atmo < 500) ] + 10                 ## valeurs constantes style 500, 300 etc. conf json (avec click c'est possible)
         return df
 
-    df = stuck_mlh(df, df.MLH)
+    df = stuck_mlh(df, df.MLH, df.time_relSR)
   
  
 print('filter Stuck MLH done')
@@ -406,7 +404,6 @@ def massive_dec_night(df, var_atmo, thresh) :
             else :  
                 idx = idx - timedelta(minutes=15)
                 ind += df[s:idx].index.to_list()
-                print(ind)
             
 
     df['FLAG_QC'][ind] = df['FLAG_QC'][ind] + 100 
@@ -533,55 +530,6 @@ print('filter Extreme points done')
 
 
 
-
-## DEEP CONVECTION : SUMMER AND AFTERNOON : UNDERESTIMATION OF ABLH 
-
-
-#if ((((48 <= lat[site] <= 49) & (2 <= lon[site] <= 3)) | ((50 <= lat[site] <= 51) & (14 <= lon[site] <= 15))) & (warm == True)) : 
-if ((((48 <= lat <= 49) & (2 <= lon <= 3)) | ((50 <= lat <= 51) & (14 <= lon <= 15))) & (warm == True)) :  
- 
-    d = (df.day == 2)
-    afternoon = (df.index.hour > 11) & (df.time_relSR > 0) 
-    
-    ux = (df.time_relSR > 2) & (df.time_relSS < -2)
-    df2 = df[afternoon & d].groupby('day', as_index=False).agg(firstcloud = ("CBH" , lambda x : x.loc[x.first_valid_index()] if x.first_valid_index() is not None else None )) ## column of first CBH in the morning  
-    
-    df['ABLC'] = df2.firstcloud[0]+500 if df2.firstcloud[0] is not None  else None
-    
-    df['ABLC'] = df['ABLC'].fillna(3000)
-    df['noise'] = np.where(d & ux & (df['MLH'] < (df['CBH'] - 200)) & (df.CBH <= df.ABLC) , 1, np.nan) 
-    indexes = df[df.noise == 1].index.to_list()
-
-    for idx in indexes :
-        df.noise[idx - 2*timedelta(minutes = 15)] = 1 
-        df.noise[idx - timedelta(minutes = 15)] = 1
-        df.noise[idx + timedelta(minutes = 15)] = 1 
-        df.noise[idx + 2*timedelta(minutes = 15)] = 1 
-
-    indexes = df[df.noise == 1].index.to_list()
-
-    df['FLAG_QC'][indexes] = df['FLAG_QC'][indexes] + 1000
-        
-    
-    
-    ux = (df.index.hour > 12) & (df.time_relSS < -2)
-    mincloud = df[afternoon & d]['CBH'].min()
-
-    minC = mincloud - 500 
-    df['noise'] = np.where((df.MLH < minC) & ux, 1, np.nan) 
-    indexes = df[df.noise == 1].index.to_list()
-
-    for idx in indexes :
-        df.noise[idx - 2*timedelta(minutes = 15)] = 1 
-        df.noise[idx - timedelta(minutes = 15)] = 1 
-        df.noise[idx + timedelta(minutes = 15)] = 1 
-        df.noise[idx + 2*timedelta(minutes = 15)] = 1 
-
-    indexes = df[df.noise == 1].index.to_list()
-    df['FLAG_QC'][indexes] = df['FLAG_QC'][indexes] + 1000
-
-
-    print('filter Deep convection done')
 
 
 
