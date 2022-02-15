@@ -305,7 +305,7 @@ if  ((site != "LERWICK,UK") & (warm == True))  :
         n_inf_500 = (day_time2 & (var_atmo < 500)).sum() 
         val_mlh2 = (day_time2 & (var_atmo > 0)).sum()
         if val_mlh2 != 0 :
-            rap2 = n_inf_300/val_mlh2
+            rap2 = n_inf_500/val_mlh2
         else :
             rap2 = np.nan
 
