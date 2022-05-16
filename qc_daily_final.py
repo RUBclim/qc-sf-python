@@ -7,7 +7,7 @@ import pathlib
 import json
 import git
 
-from datetime import date, timedelta
+from datetime import date, timedelta, time
 
 import xarray as xr
 import pandas as pd 
@@ -347,6 +347,8 @@ for i in idx:
 
 ## fonction qui prend en argument le df, la colonne df.MLH, le seuil caractéristique d'une augmentation, et qui renvoit un df flaggué  
 
+
+
 def massive_inc_night(df, var_atmo, thresh) :
     d = ((df.day == 2) | (df.day == 3))
     df2 = df[(df.time_relSR <= 1) & d & (df['diff'] > 300)]
@@ -360,24 +362,30 @@ def massive_inc_night(df, var_atmo, thresh) :
         for idx in df2.index : 
             d = (df.day == df2.day[idx])
             idx_last = df[(df.time_relSR == 5) & d].index.to_list() 
-             
+
             if df[d & t & l & (df.index > idx)].index.min() is not pd.NaT :    # increase followed by decrease
                 a = df[d & t & l & (df.index > idx)].index.min()
                 a = a - timedelta(minutes = 15)   
                 ind += df[idx:a].index.to_list()
+
 
             elif df[t & d & (var_atmo < 500) & (df.index > idx)].index.min() is not pd.NaT :    # MLH lower than 500m after increase
                 a = df[t & d & (var_atmo < 500) & (df.index > idx)].index.min()                
                 a = a - timedelta(minutes = 15)
                 ind += df[idx:a].index.to_list()
 
-            elif df['time_relSR'][idx] > -1 :    
-                ind += df[d & (df['time_relSR'] < 4 ) & (df.index >= idx)].index.to_list()   
-            else : 
+
+            elif df['time_relSR'][idx] > -1 :                                                   # increase in night end/ early morning
+                ind += df[d & (df['time_relSR'] < 4 ) & (df.index >= idx)].index.to_list()  
+
+            else :                                                        # all layer is overestimated
                 ind = ind + df[idx:idx_last[0]].index.to_list()
+
 
     df['FLAG_QC'][ind] = df['FLAG_QC'][ind] + 100
     return(df)
+
+
 
 df = massive_inc_night(df, df.MLH, 300)
 
@@ -569,9 +577,19 @@ print('filter Residual layer done')
 ## REMERGE WITH 1MIN FREQUENCY
 
 df_day_2['FLAG_QC'] = 0
-df = df[df.index.date == date.fromisoformat(day2)]
+#df = df[df.index.date == date.fromisoformat(day2)]
+df = df[(df.index.date == date.fromisoformat(day2)) | (df.index.time == time(0,0,0))]
+df = df[:len(df)-1]
+a = df.index[len(df)-1]
+b = a - timedelta(milliseconds=1)
+df.rename(index={a:b}, inplace = True)
+print(df)
+
 for i in range(1, len(df)) :
+#for i in range(0, len(df)) :
     df_day_2.loc[((df_day_2.index.time < df.index.time[i]) & (df_day_2.index.time > df.index.time[i-1])) , 'FLAG_QC'] = df.FLAG_QC[i]
+    #df_day_2.loc[((df_day_2.index < df.index[i]) & (df_day_2.index > df.index[i-1])) , 'FLAG_QC'] = df.FLAG_QC[i]
+    #df_day_2.loc[((df_day_2.index.time > df.index.time[i]) & (df_day_2.index.time < df.index.time[i+1])) , 'FLAG_QC'] = df.FLAG_QC[i]
 
 
 df2 = xr.open_dataset(day_2).to_dataframe()
