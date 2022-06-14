@@ -25,19 +25,14 @@ pd.options.mode.chained_assignment = None     ## Warning avoid : ' SettingWithCo
 site = sys.argv[1]
 print('site in python script = ', site)
 
-globals()['df_%s' % site] = xr.open_mfdataset(glob.glob(f"/homedata/mvanhove/STRATfinder/2*/{site}/ANNUAL/stratfinder_2b_{site}PmlhF1min_v01_*_V2022a.nc")).to_dataframe()
+path_all_years = sys.argv[2] #/homedata/mvanhove/STRATfinder/2*/{site}/ANNUAL/stratfinder_2b_{site}PmlhF1min_v01_*_V2022a.nc
 
+df = xr.open_mfdataset(glob.glob(f"{path_all_years}")).to_dataframe()
+df.reset_index(drop=True, level=0, inplace=True)
+df = df[df.index.duplicated() == False]
 
-globals()['df_%s' % site].reset_index(drop=True, level=0, inplace=True)
-globals()['df_%s' % site] = globals()['df_%s' % site][globals()['df_%s' % site].index.duplicated() == False]
-
-
-month = sys.argv[2]
-
-
-
-globals()['output_%s' % site] = sys.argv[3]    ## fichier contenant la donnée saisonnière json 
-
+month = sys.argv[3]
+output = sys.argv[4]    ## fichier contenant la donnée saisonnière json 
 
 
 
@@ -50,12 +45,15 @@ globals()['output_%s' % site] = sys.argv[3]    ## fichier contenant la donnée s
     nargs=1,
 )
 
+@click.argument(
+    "path_all_years",
+    nargs=1,
+)
 
 @click.argument(
     "month",
     nargs=1,
 )
-
 
 @click.argument(
     "site_o",
@@ -66,8 +64,9 @@ globals()['output_%s' % site] = sys.argv[3]    ## fichier contenant la donnée s
 )
 
 
-def main(site_name, month, site_o):
+def main(site_name, path_all_years, month, site_o):
     click.echo(click.format_filename(site_name))
+    click.echo(click.format_filename(path_all_years))
     click.echo(click.format_filename(month))
     click.echo(click.format_filename(site_o))
     
@@ -81,32 +80,32 @@ if __name__ == "__main__":
 
 
 #ds = nc.Dataset(globals()['input_%s' % site])
-lat, lon = globals()['df_%s' % site]['station_latitude'][0], globals()['df_%s' % site]['station_longitude'][0]
+lat, lon =df['station_latitude'][0], df['station_longitude'][0]
 
-globals()['ave_df%s' % site] = globals()['df_%s' % site].copy()
+ave_df = df.copy()
 
-start_date = globals()['ave_df%s' % site].index.date[0]
-end_date = globals()['ave_df%s' % site].index.date[len(globals()['ave_df%s' % site])-2]
+start_date = ave_df.index.date[0]
+end_date = ave_df.index.date[len(ave_df)-2]
 
 
 ## AVERAGING OVER 15 MIN AND FILL TIME MISSING
 
-globals()['ave_df%s' % site] = globals()['ave_df%s' % site].resample("15min").mean()
-globals()['ave_df%s' % site].index = pd.to_datetime(globals()['ave_df%s' % site].index.values) + timedelta(minutes=15)
-globals()['ave_df%s' % site].index = globals()['ave_df%s' % site].index.set_names(['time'])
+ave_df = ave_df.resample("15min").mean()
+ave_df.index = pd.to_datetime(ave_df.index.values) + timedelta(minutes=15)
+ave_df.index = ave_df.index.set_names(['time'])
     
 df2 = pd.date_range(start_date, end_date + timedelta(days=1), freq="15min")
 df2 = df2.to_frame(index=True, name=None)
 df2.index.names = ["time"]
-globals()['ave_df%s' % site] = pd.merge(globals()['ave_df%s' % site], df2, how = "right", right_index=True, left_index = True)
-globals()['ave_df%s' % site].drop(index=globals()['ave_df%s' % site].index[0], axis=0, inplace=True)
+ave_df = pd.merge(ave_df, df2, how = "right", right_index=True, left_index = True)
+ave_df.drop(index=ave_df.index[0], axis=0, inplace=True)
 
 ## IN CASE DATAFRAME DOESNT START/END AT MIDNIGHT
 df2 = pd.date_range(start_date, end_date, freq="15min")
 df2 = df2.to_frame(index=True, name=None)
 df2.index.names = ["time"]
-globals()['ave_df%s' % site] = pd.merge(globals()['ave_df%s' % site], df2, how = "right", right_index=True, left_index = True)
-globals()['ave_df%s' % site].drop(index=globals()['ave_df%s' % site].index[0], axis=0, inplace=True)
+ave_df = pd.merge(ave_df, df2, how = "right", right_index=True, left_index = True)
+ave_df.drop(index=ave_df.index[0], axis=0, inplace=True)
 
 
 
@@ -144,7 +143,7 @@ for j in range(1, len(sunrise)-1):
             dt.append(-(24-time[i] + sunrise[j+1]))
             
 
-globals()['ave_df%s' % site].insert(2,'time_relSR', dt)
+ave_df.insert(2,'time_relSR', dt)
 
 
 ss = []
@@ -156,7 +155,7 @@ for j in range(len(sunset)-2):
             ss.append(time[i]-sunset[j+1])
             
 
-globals()['ave_df%s' % site].insert(3,'time_relSS', ss)
+ave_df.insert(3,'time_relSS', ss)
 
 # OTHER INDEXES
 
@@ -171,24 +170,24 @@ for i in range(1, len(globals()['ave_df%s' % site])):
         day.append(n)           #day relative to sunrise/sunset
 
 
-globals()['ave_df%s' % site].insert(4, 'day', day)
+ave_df.insert(4, 'day', day)
 
 
 
 ## MEDIAN VALUES
 
-lim = int(len(globals()['ave_df%s' % site])/2500)
+lim = int(len(ave_df)/2500)
 
 
-df = globals()['ave_df%s' % site][globals()['ave_df%s' % site].index.month == int(month)].groupby('time_relSR', as_index=False).agg(mlh_med = ("MLH" , lambda x : x.median() if ((np.isnan(x)==False).sum() > lim) else None), mlh_q1 = ("MLH" , lambda x : x.quantile(0.25) if ((np.isnan(x)==False).sum() > lim) else None), mlh_q3 = ("MLH" , lambda x : x.quantile(0.75) if ((np.isnan(x)==False).sum() > lim) else None))
+df_final = ave_df[ave_df.index.month == int(month)].groupby('time_relSR', as_index=False).agg(mlh_med = ("MLH" , lambda x : x.median() if ((np.isnan(x)==False).sum() > lim) else None), mlh_q1 = ("MLH" , lambda x : x.quantile(0.25) if ((np.isnan(x)==False).sum() > lim) else None), mlh_q3 = ("MLH" , lambda x : x.quantile(0.75) if ((np.isnan(x)==False).sum() > lim) else None))
 
 
-df.set_index('time_relSR', inplace=True)
+df_final.set_index('time_relSR', inplace=True)
 
 month_lab_list = [' ', 'jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec']
 month_lab = month_lab_list[int(month)]
 
-data = {'title' : f'MLH_{month_lab}_{site}_Stratfinder', 'time' : list(df.index), 'mlh_med': list(df.mlh_med), 'mlh_q1': list(df.mlh_q1), 'mlh_q3': list(df.mlh_q3), 'label_x' : 'time relative to SR [h]', 'label_y' : 'MLH median [magl]'}
+data = {'title' : f'MLH_{month_lab}_{site}_Stratfinder', 'time' : list(df_final.index), 'mlh_med': list(df_final.mlh_med), 'mlh_q1': list(df_final.mlh_q1), 'mlh_q3': list(df_final.mlh_q3), 'label_x' : 'time relative to SR [h]', 'label_y' : 'MLH median [magl]'}
 
 
 ## JSON FILE
