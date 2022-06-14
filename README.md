@@ -9,8 +9,9 @@ Applique le contrôle de qualité sur le L2A et ainsi produit les L2B
 
 # SCRIPT : run_plot_sites_jason.sh
 
-## Arguments : nrep
-rep = dossier contenant les fichiers L2B annuels
+## Arguments : path_all_years, rep
+path_all_years = dossier contenant les fichiers L2B annuels
+rep = dossier de sortie contenant les json files
 
 ### Rôle
 Lance le script de production des json files pour la climatologie
