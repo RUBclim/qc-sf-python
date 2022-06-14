@@ -162,7 +162,7 @@ ave_df.insert(3,'time_relSS', ss)
 n=1
 day=[1]
 
-for i in range(1, len(globals()['ave_df%s' % site])):
+for i in range(1, len(ave_df)):
     if dt[i-1]>0 and dt[i]<0 :
         day.append(n+1)
         n=n+1
