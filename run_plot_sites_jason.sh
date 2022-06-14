@@ -1,0 +1,27 @@
+#!/bin/bash
+# run jason files for median cycles
+#PBS -j oe
+#PBS -o /home/mvanhove/STRATfinder/scripts/qc-sf-python/example.out
+#PBS -q std
+
+
+
+module load nco/4.9.3
+
+module load python/3.8-anaconda
+source activate /home/jupyterweb/python_envs/pangeo/
+
+
+for site in 'palaiseau' 'granada' 'magurele' 'saint-christophe-aosta' 'lerwick' 'lindenberg' 'qualair'
+do
+ echo "what? ${site}"
+ rep=/homedata/mvanhove/STRATfinder/climato
+
+ for month in 1 2 3 4 5 6 7 8 9 10 11 12
+ do
+  #cd /home/mvanhove/STRATfinder/scripts/qc-sf-python
+  python /home/mvanhove/STRATfinder/scripts/qc-sf-python/plot_sites_json.py ${site} ${month} ${rep}/${site}_${month}_SF.json
+  
+  echo "${site} done"
+ done
+done
