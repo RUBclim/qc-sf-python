@@ -7,6 +7,7 @@
 
 
 rep=$1  #/homedata/mvanhove/STRATfinder/climato
+path_all_years=$2 #/homedata/mvanhove/STRATfinder/2*/{site}/ANNUAL/stratfinder_2b_{site}PmlhF1min_v01_*_V2022a.nc
 
 module load nco/4.9.3
 
@@ -21,7 +22,7 @@ do
  for month in 1 2 3 4 5 6 7 8 9 10 11 12
  do
   #cd /home/mvanhove/STRATfinder/scripts/qc-sf-python
-  python /home/mvanhove/STRATfinder/scripts/qc-sf-python/plot_sites_json.py ${site} ${month} ${rep}/${site}_${month}_SF.json
+  python /home/mvanhove/STRATfinder/scripts/qc-sf-python/plot_sites_json.py ${site} ${path_all_years} ${month} ${rep}/${site}_${month}_SF.json
   
   echo "${site} done"
  done
