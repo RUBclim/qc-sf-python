@@ -260,12 +260,12 @@ df.insert(5, 'FLAG_QC', 0)
 
 
 
+
 ## INIT FILTERS
 
 ## RAIN
 
-df['MLH'] = np.where(df.prof > 0,np.nan,df.MLH)
-prof = (df.prof > 0).sum()
+#df['MLH'] = np.where(df.prof > 0,np.nan,df.MLH) #useless because MLH already NaN where prof > 0 ; moreover, with 15min averaging, some existing MLH might become NaN and therefore 'invisible' for next filters (case for 19/12/20)
 
 df2 = df[df['time_relSR']<1].groupby('day', as_index=False).agg(profn = ("prof",  lambda x : (pd.to_numeric(x)>0.1).sum()))   ## profn = nombre de fois où prof est > 10, par nuit
 df3 = df[df['time_relSR']>-1].groupby('day', as_index=False).agg(profd = ("prof",  lambda x : (pd.to_numeric(x)>0.1).sum()))  ## profd = nombre de fois où prof est > 10, par jour
@@ -576,20 +576,15 @@ print('filter Residual layer done')
 ## REMERGE WITH 1MIN FREQUENCY
 
 df_day_2['FLAG_QC'] = 0
-#df = df[df.index.date == date.fromisoformat(day2)]
 df = df[(df.index.date == date.fromisoformat(day2)) | (df.index.time == time(0,0,0))]
 df = df[:len(df)-1]
 a = df.index[len(df)-1]
 b = a - timedelta(milliseconds=1)
 df.rename(index={a:b}, inplace = True)
-print(df)
 
 for i in range(1, len(df)) :
-#for i in range(0, len(df)) :
     df_day_2.loc[((df_day_2.index.time < df.index.time[i]) & (df_day_2.index.time > df.index.time[i-1])) , 'FLAG_QC'] = df.FLAG_QC[i]
-    #df_day_2.loc[((df_day_2.index < df.index[i]) & (df_day_2.index > df.index[i-1])) , 'FLAG_QC'] = df.FLAG_QC[i]
-    #df_day_2.loc[((df_day_2.index.time > df.index.time[i]) & (df_day_2.index.time < df.index.time[i+1])) , 'FLAG_QC'] = df.FLAG_QC[i]
-
+   
 
 df2 = xr.open_dataset(day_2).to_dataframe()
 df2 = df2.loc[df2.index.dropna()]
@@ -617,12 +612,11 @@ ds['MLH'] = ds['MLH'].transpose("time", "station")
 
 ds = ds.rename({"FLAG" : "precip_FLAG"})
 ds.precip_FLAG.attrs["units"] = 'range between 0 and 1'
-#print(ds['precip_FLAG']) #= 100*np.array(ds['precip_FLAG'])
-#print(ds.precip_FLAG.apply(lambda x : 100*x))
+
 FLAG_QC = df2['FLAG_QC'].astype(np.int32).to_xarray()
 FLAG_QC.attrs["units"] = '1'
 FLAG_QC.attrs["long_name"] = "flag for MLH after quality control"
-#ds["FLAG"] = FLAG_QC
+
 ds['FLAG'] = FLAG_QC.transpose("time", "station")
 
 ds.attrs['comment'] = "Mixed layer height after quality control"
