@@ -27,7 +27,7 @@ print('site in python script = ', site)
 
 path_all_years = sys.argv[2] #/homedata/mvanhove/STRATfinder/2*/{site}/ANNUAL/stratfinder_2b_{site}PmlhF1min_v01_*_V2022a.nc
 
-df = xr.open_mfdataset(glob.glob(f"{path_all_years}")).to_dataframe()
+df = xr.open_mfdataset(glob.glob(f"{path_all_years}/2*/{site}/ANNUAL/stratfinder_2b_{site}PmlhF1min_v01_*_V2022a.nc")).to_dataframe()
 df.reset_index(drop=True, level=0, inplace=True)
 df = df[df.index.duplicated() == False]
 
@@ -176,8 +176,10 @@ ave_df.insert(4, 'day', day)
 
 ## MEDIAN VALUES
 
-lim = int(len(ave_df)/2500)
-
+if site == 'palaiseau' :
+    lim = 100 # int(len(ave_df)/1500)
+else :
+    lim = 0
 
 df_final = ave_df[ave_df.index.month == int(month)].groupby('time_relSR', as_index=False).agg(mlh_med = ("MLH" , lambda x : x.median() if ((np.isnan(x)==False).sum() > lim) else None), mlh_q1 = ("MLH" , lambda x : x.quantile(0.25) if ((np.isnan(x)==False).sum() > lim) else None), mlh_q3 = ("MLH" , lambda x : x.quantile(0.75) if ((np.isnan(x)==False).sum() > lim) else None))
 
@@ -193,7 +195,7 @@ data = {'title' : f'MLH_{month_lab}_{site}_Stratfinder', 'time' : list(df_final.
 ## JSON FILE
 
 
-with open(f"{globals()['output_%s' % site]}", 'w') as f:
+with open(f"{output}", 'w') as f:
     json.dump(data, f)
 
 

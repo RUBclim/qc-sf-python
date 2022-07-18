@@ -556,15 +556,14 @@ if warm == True :
     
 
 #SON DJF
-per = ((month2 < 3) | (month2 > 9))
-if per :
+else : 
     ii =  ( df.time_relSS > 2) & (df.time_relSR < 2)  
-    df2 = df[ii].groupby('day', as_index=False).agg(mMM = ("MLH" , lambda x :  (x>600).sum()/(x>0).sum() if (x>0).sum() != 0 else None))
-    llcheck = list(df2.day[df2.mMM > 0.5])
+    df2 = df[ii].groupby('day', as_index=False).agg(mM = ("MLH" , lambda x :  (x>600).sum()/(x>0).sum() if (x>0).sum() != 0 else None))
+    llcheck = list(df2.day[df2.mM > 0.5])
 
     if llcheck != [] :
         for d in llcheck :
-            df.FLAG_QC[(df.time_relSR < 2) & (df.day == d) & (df.MLH > 500)] = df.FLAG_QC[(df.time_relSR < 2) & (df.day == d) & (df.MLH > 500)] + 10000
+            df.FLAG_QC[(df.time_relSR < 3) & (df.day == d) & (df.MLH > 500)] = df.FLAG_QC[(df.time_relSR < 3) & (df.day == d) & (df.MLH > 500)] + 10000
 
 
 print('filter Residual layer done')
