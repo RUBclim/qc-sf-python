@@ -7,7 +7,8 @@ import pathlib
 import json
 import git
 import glob
-from typing import Tuple
+from typing import Tuple, List
+from pathlib import Path
 from datetime import date, timedelta
 import pwd
 import grp
@@ -31,7 +32,7 @@ __author__ = "Melania Van Hove"
 #################################################################################################################################
 
 
-def list_files(dir: str) -> list:
+def list_files(dir: str) -> List:
     """[list the files inside the directory]
 
     Args:
@@ -48,7 +49,7 @@ def list_files(dir: str) -> list:
 
 
 def average_dataframe(
-    list_files: list,
+    list_files: List,
 ) -> Tuple(str, str, pd.DatetimeIndex, pd.DatetimeIndex, pd.DataFrame):
 
     with xr.open_mfdataset(list_files) as ds:
@@ -124,24 +125,24 @@ def average_dataframe(
 
 
 def main(
-    site_name: click.argument,
-    path_all_years: click.argument,
-    month: click.argument,
-    site_o: click.argument,
-    inst: click.argument,
-    inst_id: click.argument,
-    VL2B: click.argument,
+    site_name: Path,
+    path_all_years: Path,
+    month: Path,
+    site_o: Path,
+    inst: Path,
+    inst_id: Path,
+    VL2B: Path,
 ) -> None:
     """_summary_
 
     Args:
-        site_name (click.argument): Instrument's site name
-        path_all_years (click.argument): Path of the L2B concatenated files
-        month (click.argument): Chosen month to create the json files
-        site_o (click.argument): Output path for the json files
-        inst (click.argument): Instrument's name 
-        inst_id (click.argument): Instrument id's name 
-        VL2B (click.argument): Version of the L2B files 
+        site_name (Path): Instrument's site name
+        path_all_years (Path): Path of the L2B concatenated files
+        month (Path): Chosen month to create the json files
+        site_o (Path): Output path for the json files
+        inst (Path): Instrument's name 
+        inst_id (Path): Instrument id's name 
+        VL2B (Path): Version of the L2B files 
 
     Returns:
         _type_: _description_

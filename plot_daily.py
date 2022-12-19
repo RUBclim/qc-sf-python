@@ -12,6 +12,8 @@ import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 import grp
 import pwd
+from typing import Tuple, List
+from pathlib import Path
 
 from solartime import SolarTime
 
@@ -46,7 +48,7 @@ __author__ = "Melania Van Hove"
         exists=False, readable=True, file_okay=True, dir_okay=False, resolve_path=True
     ),
 )
-def main(l2a: click.argument, l2b: click.argument, output: click.argument) -> None:
+def main(l2a: Path, l2b: Path, output: Path) -> None:
     """ 
 
     Args:
@@ -153,6 +155,7 @@ def main(l2a: click.argument, l2b: click.argument, output: click.argument) -> No
 
         else:
             print("error with the files")
+    return 0
 
 
 if __name__ == "__main__":

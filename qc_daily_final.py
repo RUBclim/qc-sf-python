@@ -14,7 +14,7 @@ import xarray as xr
 import pandas as pd
 import numpy as np
 import netCDF4 as nc
-
+from typing import Dict, List
 from solartime import (
     SolarTime,
 )  ## to be replaced by pvlib if more problems encountered, works for now
