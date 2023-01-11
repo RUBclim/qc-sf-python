@@ -1,31 +1,69 @@
-#!/bin/bash
-# run jason files for median cycles
-#PBS -j oe
-#PBS -o /home/mvanhove/STRATfinder/scripts/qc-sf-python/example.out
-#PBS -q std
+#!/bin/bash -l
+
+#run QC on L2A to create L2B
+
+#SBATCH --mem=15g
+#SBATCH -o RUN_QC.out
+#SBATCH --time=8-00:00:00
 
 
+
+#rep='/home/mvanhove/STRATfinder/scripts/qc-sf-python/qc_daily_final.py'
+#config_file='/home/eprofile/eprofile/script/stratfinder/config/settings_STRATfinder_falkenberg_chm15k_0.json'
 
 rep='/home/mvanhove/STRATfinder/scripts/qc-sf-python/qc_daily_final.py'
-config_file='/home/eprofile/eprofile/script/stratfinder/config/settings_STRATfinder_palaiseau_chm15k_B.json'
+#config_file='/home/mvanhove/STRATfinder/scripts/v2022c_cl61_berlin/settings_STRATfinder_cl61_urbi_tempelhof.json'
+config_file='/home/mvanhove/STRATfinder/conf_files/settings_STRATfinder_hdv_cl61_temp.json'
+
 
 module load nco/4.9.3
-
+module load git/2.31.0
 module load python/3.8-anaconda
 source activate /home/jupyterweb/python_envs/pangeo/
 
+site='hdv'
+#site='falkenberg'
+#site='berlin'
 
-for site in 'palaiseau'   #'qualair' 'palaiseau' 'granada' 'magurele' 'saint-christophe-aosta' 'lerwick' 'lindenberg' #'qualair'
+#liste_2022_falkenberg=`ls /homedata/mvanhove/STRATfinder/2022/falkenberg/v2022c/eprofile_1a_LfalkenbergIchm15k_v01_202?????_000011_L2A_v2022c_2weights_os.nc` 
+#liste_2022_lindenberg=`ls /homedata/mvanhove/L2A/lindenberg/eprofile_L2A_STRATFINDER_lindenberg_chm15k-0_v01_2022????.nc`
+liste_2022_hdv=`ls /homedata/mvanhove/CL61/HDV/stratfinder_v2022c/cl61_1a_LHdVPpr2R5mF30s_v01_20220???_000000_L2A_180m_v2022c_2weights_os.nc`
+
+arr=($liste_2022_hdv)
+
+day1='nothing'
+#day3='/homedata/mvanhove/STRATfinder/2022/falkenberg/v2022c/eprofile_1a_LfalkenbergIchm15k_v01_20210708_000011_L2A_v2022c_2weights_os.nc'
+day3='/homedata/mvanhove/CL61/HDV/stratfinder_v2022c/cl61_1a_LHdVPpr2R5mF30s_v01_20220602_000000_L2A_180m_v2022c_2weights_os.nc'
+#day3='nothing'
+
+iter=1
+
+#for file in /homedata/mvanhove/STRATfinder/2022/falkenberg/v2022c/eprofile_1a_LfalkenbergIchm15k_v01_202*_000011_L2A_v2022c_2weights_os.nc
+#do
+#for file in /homedata/mvanhove/CL61_urbisphere/CL61_Berlin/new_data/raw2l1_set\(de.berlin.BETEMP\,ALC_T*\,20220729T000000_20220730T000000\)_version\(v1.0.1_L2A_120m_v2022a.nc
+#do
+#for file in /homedata/mvanhove/L2A/lindenberg/eprofile_L2A_STRATFINDER_lindenberg_chm15k-0_v01_2022????.nc
+#do
+#for file in /homedata/mvanhove/CL61/HDV/stratfinder_v2022c/cl61_1a_LHdVPpr2R5mF30s_v01_20220*_000000_L2A_180m_v2022c_2weights_os.nc
+#do
+for file in /homedata/mvanhove/STRATfinder/2020/palaiseau/v2022c_572bc947/eprofile_1a_LpalaiseauIchm15k_v01_20200424_000011_L2A_v2022c_572bc947_noise_5_c1_p2_w14.nc
 do
- echo "what? ${site}"
- #for day in 19                        #1 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 
- day1='/homedata/mvanhove/STRATFINDER/outfiles/palaiseau_18_12_2020.nc'
- day2='/homedata/mvanhove/STRATFINDER/outfiles/palaiseau_19_12_2020.nc'
- day3='/homedata/mvanhove/STRATFINDER/outfiles/palaiseau_20_12_2020.nc'
- output_day2='/homedata/mvanhove/STRATFINDER/outfiles/palaiseau_19_12_2020_l2b.nc'
- #cd /home/mvanhove/STRATfinder/scripts/qc-sf-python
- python ${rep} ${day1} ${day2} ${day3} ${config_file} ${output_day2} 
-  
- echo "${site} done"
- #done
+ #output_day2=${file%L2A*}L2B_180m_v2022c_2weights_os.nc
+ #output_day2=${file%.nc}_L2B.nc
+ output_day2=${file%L2A*}L2B_v2022c_572bc947_noise_5_c1_p2_w14.nc
+ echo $day1
+ echo $file
+ echo $day3
+ echo $output_day2
+
+ python ${rep} ${day1} ${file} ${day3} ${config_file} ${output_day2} 
+
+ day1=$file
+ file=$day3
+ iter=$iter+1
+ day3=${arr[$iter]}
+ 
+ 
 done
+
+#mv /homedata/mvanhove/STRATfinder/2022/falkenberg/v2022c/eprofile_1a_LfalkenbergIchm15k_v01_202*_000011_L2B*.nc /homedata/mvanhove/STRATfinder/2022/falkenberg/v2022c/L2B/

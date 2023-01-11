@@ -54,7 +54,7 @@ if (isFile1 == True) & (isFile2 == True) :
     
     
     df1['MLH'].plot(x_compat=True, ax=ax, style = '.', markersize = 10, color = 'grey', label = "Data removed")
-    df2['MLH'].plot(x_compat=True, ax=ax, style='.', markersize = 10, color = 'limegreen', label = "Data kept")
+    df2['MLH'].plot(x_compat=True, ax=ax, style = '.', markersize = 10, color = 'limegreen', label = "Data kept")
 
     ax.xaxis.set_major_locator(mdates.DayLocator())
     ax.xaxis.set_major_formatter(mdates.DateFormatter('%d/%m/%y'))
@@ -73,18 +73,17 @@ if (isFile1 == True) & (isFile2 == True) :
     plt.yticks(fontsize = 20)
     plt.ylabel("MLH (m)", fontsize = 20)
     plt.title(f"Mixed layer height after quality control - STRATfinder - {site}" , fontsize = 20, y = 1.1)
-    #print('x[0] = ', x[0], 'SR =', sr)
+
     plt.fill_betweenx([0,4000], x[0], sr, alpha=0.1, color = 'skyblue')
-    #print('x = ', x, ' x[len(x)-1] = ',  x[len(x)-1], 'SS =', ss)
     plt.fill_betweenx([0,4000], ss, x[len(x)-1], alpha=0.1, color = 'skyblue')
 
     plt.ylim([0,4000])
     legend1 = plt.legend(fontsize=18, loc = "upper right", shadow = True, facecolor = 'ghostwhite',
-              ncol=2,  borderaxespad= 4.)#, bbox_to_anchor=(-0.0, 1.16, 1.10, .102) )
+              ncol=2,  borderaxespad= 4.)
 
     plt.tight_layout()
     plt.grid()
     plt.savefig(output)
 
 else :
-    print('error with the files')
+    print('file missing')
