@@ -128,7 +128,7 @@ def Get_coverage(ds: xr.Dataset, var: str):
     return list_var[0], list_var[-1]
 
 
-def cold_day_inc(df: pd.DataFrame, var_atmo, thresh) -> pd.DataFrame:
+def cold_day_inc(df: pd.DataFrame, thresh) -> pd.DataFrame:
     """_summary_
 
     Args:
@@ -149,7 +149,7 @@ def cold_day_inc(df: pd.DataFrame, var_atmo, thresh) -> pd.DataFrame:
     if df2.index.size != 0:
         for idx in df2.index:
             if df[(df.index >= idx) & (df.MLH < 500) & d].index.min() is not pd.NaT:
-                a = df[(df.index >= idx) & (var_atmo < 500) & d].index.min()
+                a = df[(df.index >= idx) & (df.MLH < 500) & d].index.min()
                 ind = ind + df[idx : a - timedelta(minutes=15)].index.to_list()
 
             elif df[l & (df.index >= idx) & d].index.min() is not pd.NaT:
@@ -200,7 +200,7 @@ def cold_morn_inc(df: pd.DataFrame, thresh: int) -> pd.DataFrame:
     return df
 
 
-def massive_dec_night(df: pd.DataFrame, var_atmo, thresh) -> pd.DataFrame:
+def massive_dec_night(df: pd.DataFrame, thresh) -> pd.DataFrame:
     """_summary_
 
     Args:
@@ -235,42 +235,38 @@ def massive_dec_night(df: pd.DataFrame, var_atmo, thresh) -> pd.DataFrame:
     return df
 
 
-def stuck_mlh(df: pd.DataFrame, var_atmo, time_relSR) -> pd.DataFrame:
+def stuck_mlh(df: pd.DataFrame) -> pd.DataFrame:
     """_summary_
 
     Args:
         df (_type_): _description_
-        var_atmo (_type_): _description_
-        time_relSR (_type_): _description_
 
     Returns:
         _type_: _description_
     """
     d = df.day == 2
-
-    daytime = (time_relSR > 5) & d
-    n_inf_300 = (daytime & (var_atmo < 300)).sum()
-    val_mlh1 = (daytime & (var_atmo > 0)).sum()
+    daytime = (df.time_relSR > 5) & d
+    n_inf_300 = (daytime & (df.MLH < 300)).sum()
+    val_mlh1 = (daytime & (df.MLH > 0)).sum()
     if val_mlh1 != 0:
         rap1 = n_inf_300 / val_mlh1
     else:
         rap1 = np.nan
 
-    morning = (time_relSR > 0) & (time_relSR <= 5) & d
-    max_morn = var_atmo[morning].max()
-
-    afternoon = (time_relSR > 7) & d
-    n_inf_500 = (afternoon & (var_atmo < 500)).sum()
-    val_mlh2 = (afternoon & (var_atmo > 0)).sum()
+    morning = (df.time_relSR > 0) & (df.time_relSR <= 5) & d
+    max_morn = df.MLH[morning].max()
+    afternoon = (df.time_relSR > 7) & d
+    n_inf_500 = (afternoon & (df.MLH < 500)).sum()
+    val_mlh2 = (afternoon & (df.MLH > 0)).sum()
     if val_mlh2 != 0:
         rap2 = n_inf_500 / val_mlh2
     else:
         rap2 = np.nan
 
     if (rap1 > 0.5) | ((max_morn > 300) & (rap2 > 0.5)):
-        df.FLAG_QC[daytime & (var_atmo < 500)] = (
-            df.FLAG_QC[daytime & (var_atmo < 500)] + 10
-        )  ## valeurs constantes style 500, 300 etc. conf json (avec click c'est possible)
+        df.FLAG_QC[daytime & (df.MLH < 500)] = (
+            df.FLAG_QC[daytime & (df.MLH < 500)] + 10
+        )  
     return df
 
 
@@ -339,12 +335,11 @@ def create_df3day(day_1a: Path, day_2a: Path, day_3a: Path) -> pd.DataFrame:
     return df
 
 
-def massive_inc_night(df: pd.DataFrame, var_atmo, thresh) -> pd.DataFrame:
+def massive_inc_night(df: pd.DataFrame, thresh) -> pd.DataFrame:
     """_summary_
 
     Args:
         df (pd.DataFrame): _description_
-        var_atmo (_type_): _description_
         thresh (_type_): _description_
 
     Returns:
@@ -371,10 +366,10 @@ def massive_inc_night(df: pd.DataFrame, var_atmo, thresh) -> pd.DataFrame:
                 ind += df[idx:a].index.to_list()
 
             elif (
-                df[t & d & (var_atmo < 500) & (df.index > idx)].index.min()
+                df[t & d & (df.MLH < 500) & (df.index > idx)].index.min()
                 is not pd.NaT
             ):  # MLH lower than 500m after increase
-                a = df[t & d & (var_atmo < 500) & (df.index > idx)].index.min()
+                a = df[t & d & (df.MLH < 500) & (df.index > idx)].index.min()
                 a = a - timedelta(minutes=15)
                 ind += df[idx:a].index.to_list()
 
@@ -525,16 +520,19 @@ def main(
     click.echo(config_filea)
     click.echo(click.format_filename(output_day2a))
 
-    ## CONFIGURATION : WHAT DEPENDS ON THE SITE
+    ## CONFIGURATION
+    today = date.today()
+    date_today = today.strftime("%B %d, %Y")
     maxmlh = get_maxmlh(config_filea)
     print(f"Read the file {config_filea}")
     df = create_df3day(day_1a, day_2a, day_3a)
     print("complete dataframe created")
     ndata_day2 = int(len(df) / 3)
+    warm = (month2 > 3) & (month2 < 10)
+
     with xr.open_dataset(day_2a) as ds:
         site = ds.attrs["site_location"]  ## site name given in J file
         month2 = ds["time"].dt.month[0].values
-        warm = (month2 > 2) & (month2 < 10)
         lat = ds["station_latitude"][0].values
         lon = ds["station_longitude"][0].values
         ds = clean_time_array(ds)
@@ -545,10 +543,10 @@ def main(
             "dtype": "double",
             "_FillValue": None,
             "units": ds["time"].encoding["units"] + "UTC",
-        }  # 'long_name' : 'time'}
+        }  
         ds2_enco["MLH"] = {"dtype": ds["MLH"].encoding["dtype"], "_FillValue": "-999"}
         ds2_enco["FLAG"] = {"_FillValue": -999}
-        # transform to dataframe the xr.dataset
+        # from dataset to dataframe
         df_day_2 = ds.to_dataframe()
         df_day_2 = df_day_2.reset_index(level=0, drop=True)
         df_day_2 = df_day_2[~df_day_2.index.duplicated(keep="first")]
@@ -600,15 +598,14 @@ def main(
                 schedule["sunset"].second
                 + 60 * schedule["sunset"].minute
                 + 3600 * schedule["sunset"].hour
-            ) / 3600.0  ## same for sunset
+            ) / 3600.0  ## sunset in hour
             sunset1 = 0.25 * (round(4.0 * sunset1))
 
             sunrise.append(sunrise1)
             sunset.append(sunset1)
             date = date + timedelta(days=1)
 
-            ## mettre les ss et sr dans df et créer des slices pour
-            ##rajouter time_relSR et SS dans ces slices
+        ## COLUMNS 'time relative to sunrise', 'time relative to sunset' AND 'day defined from sunset to sunset' 
 
         Time = [i / 4.0 for i in range(1, ndata_day2 + 1)]
         dt = []
@@ -632,8 +629,6 @@ def main(
 
         df.insert(3, "time_relSS", ss)
 
-        ## DAY RELATIVE FROM SUNSET TO SUNSET
-
         n = 1
         df.insert(4, "day", 0)
         for i in df.index:
@@ -645,11 +640,13 @@ def main(
 
         print("Time relative to SR, SS, and day relative to SS done")
 
-        ## FLAG INIT
+        ## FLAG COLUMN
 
         df.insert(5, "FLAG_QC", 0)
 
-        ## INIT FILTERS
+
+
+        ## FILTERS
 
         ## RAIN
 
@@ -659,24 +656,24 @@ def main(
             df[df["time_relSR"] < 1]
             .groupby("day", as_index=False)
             .agg(profn=("prof", lambda x: (pd.to_numeric(x) > 0.1).sum()))
-        )  ## profn = nombre de fois où prof est > 10, par nuit
+        )  ## profn = number of times prof > 10, grouped by night
         df3 = (
             df[df["time_relSR"] > -1]
             .groupby("day", as_index=False)
             .agg(profd=("prof", lambda x: (pd.to_numeric(x) > 0.1).sum()))
-        )  ## profd = nombre de fois où prof est > 10, par jour
+        )  ## profd = number of times prof > 10, grouped by day
         df = (
             df.reset_index().merge(df2, how="left").set_index("time")
-        )  ## les valeurs de profn sont rajoutées à df
+        )  ## profn added to main dataframe
         df = (
             df.reset_index().merge(df3, how="left").set_index("time")
-        )  ## les valeurs de profd sont rajoutées à df
+        )  ## profn added to main dataframe
         df.FLAG_QC[(df.profd >= 12) & (df.time_relSR > -1)] = (
             df.FLAG_QC + 1
-        )  ## si profd >= 12 dans un même jour, le jour est flaggué
+        )  ## if profd >= 12 in one day, the day is flaggued
         df.FLAG_QC[(df.profn >= 12) & (df.time_relSR < 1)] = (
             df.FLAG_QC + 1
-        )  ## si profn >= 12 dans une même nuit, la nuit est flagguée
+        )  ## if profn >= 12 in one night, the night is flaggued
 
         print("filter Rain done")
 
@@ -709,11 +706,11 @@ def main(
 
         ## fonction qui prend en argument le df, la colonne df.MLH, le seuil caractéristique d'une augmentation, et qui renvoit un df flaggué
 
-        df = massive_inc_night(df, df.MLH, 300)
+        df = massive_inc_night(df, 250)
 
         ## MASSIVE DECREASE AT NIGHT
 
-        df = massive_dec_night(df, df.MLH, -300)
+        df = massive_dec_night(df, -250)
 
         print("filter Massive decrease/increase at night done")
 
@@ -738,11 +735,11 @@ def main(
 
             ## INCREASE - COLD SEASONS DAYS
 
-            df = cold_day_inc(df, df.MLH, 1000)
+            df = cold_day_inc(df, 1000)
 
         ## INCREASE - WARM SEASONS
 
-        else:  # ie :   if per = (month2 < 10) & (month2 > 2)
+        else:  
 
             df = warm_day_inc(df, 1000)
 
@@ -866,7 +863,7 @@ def main(
 
         ds["FLAG"] = FLAG_QC.transpose("time", "station")
 
-        ds.attrs["comment"] = "Mixed layer height after quality control"
+        ds.attrs["comment"] = "Mixed layer height after quality control; Git repository : git@gitlab.in2p3.fr:mvanhove/qc-sf-python.git"
 
         # repo = git.Repo('/home/mvanhove/STRATfinder/scripts/qc-sf-python/')
         # Write the history about the commited script
@@ -875,7 +872,7 @@ def main(
         sha = repo.head.commit.hexsha
         ds.attrs[
             "history"
-        ] = f"Git repository : git@gitlab.in2p3.fr:mvanhove/qc-sf-python.git  ;  Version of quality control code : {sha}"
+        ] = f"Version of quality control code : {sha} ; date of creation : {date_today}"
 
         print("MLH replaced, FLAG added, History added")
 
