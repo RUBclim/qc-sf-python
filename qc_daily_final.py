@@ -13,8 +13,8 @@ from datetime import date, timedelta, time, datetime
 import xarray as xr
 import pandas as pd
 import numpy as np
-import netCDF4 as nc
-from typing import Dict, List
+from typing import Dict, List, Tuple
+from pathlib import Path
 from solartime import (
     SolarTime,
 )  ## to be replaced by pvlib if more problems encountered, works for now
@@ -28,6 +28,40 @@ __author__ = "Melania Van Hove"
 #################################################################################################################################
 #############################################FUNCTION############################################################################
 #################################################################################################################################
+
+
+def read_global_attribute_json(json_file: str) -> Dict:
+    """Read the json file 
+
+    Args:
+        json_file (str): json file to read
+
+    Returns:
+        Dict: Contain of the json file 
+    """
+    with open(json_file, "r") as jsonfile:
+        data = json.load(jsonfile)
+    return data
+
+
+def add_to_dict(dict_json: Dict, dict_nc: Dict, list_filt: List) -> Dict:
+    """Get the dictionary issued from the json file and add these metadatas 
+    into the dict_nc who represents the actuall metadata contains into with 
+    the 
+
+    Args:
+        dict_json (Dict): dictionary representing the json file contain
+        dict_nc (Dict): dictionary representing the nnetcdf contain regarding global attributes 
+        list_filt (List): List of attributes to not be picked 
+
+    Returns:
+        Dict: The dict_nc with the added global attributes
+    """
+
+    for key in dict_json.keys():
+        if key not in list_filt:
+            dict_nc[key] = dict_json[key]
+    return dict_nc
 
 
 def get_maxmlh(json_file: str) -> str:
@@ -51,7 +85,8 @@ def get_maxmlh(json_file: str) -> str:
 
 def clean_time_array(ds: xr.Dataset) -> xr.Dataset:
     """ Remove the nan in the time index,remove the duplicates and 
-    then sort the time dimension in the ascending order. 
+    then sort the time dimension in the ascending order, and floor
+    the time in minute
 
     Args:
         ds (xr.dataset): Dataset 
@@ -66,7 +101,31 @@ def clean_time_array(ds: xr.Dataset) -> xr.Dataset:
     _, index = np.unique(ds["time"], return_index=True)
     ds = ds.isel(time=index)
     ds = ds.sortby("time")
+    ds["time"] = ds["time"].dt.floor("min")
     return ds
+
+
+def Get_coverage(ds: xr.Dataset, var: str):
+    """Get the min and maximum coverage for some variable such as time,latitude 
+    or longitude 
+
+    Args:
+        ds (xr.Dataset): xarray dataset 
+        var (str): variable to cheose 
+
+    Returns:
+        _type_: _description_
+    """
+    list_var = list(ds.keys())
+    list_dim = list(ds.coords)
+    list_var_dim = list_var + list_dim
+    if var in list_var_dim:
+        list_var = list(ds[str(var)])
+    else:
+        print(
+            f"the variable {var} is not in the list_var_dim whose elements are {list_var_dim}"
+        )
+    return list_var[0], list_var[-1]
 
 
 def cold_day_inc(df: pd.DataFrame, var_atmo, thresh) -> pd.DataFrame:
@@ -215,9 +274,7 @@ def stuck_mlh(df: pd.DataFrame, var_atmo, time_relSR) -> pd.DataFrame:
     return df
 
 
-def create_df3day(
-    day_1a: click.Path, day_2a: click.Path, day_3a: click.Path
-) -> pd.DataFrame:
+def create_df3day(day_1a: Path, day_2a: Path, day_3a: Path) -> pd.DataFrame:
     """create a merged dataframe of the J-1,J and J+1 file 3 cases can happen 
 
 
@@ -279,9 +336,20 @@ def create_df3day(
 
     df = pd.concat([df1, df2, df3])
     df = pd.merge(df, df_id, how="right", right_index=True, left_index=True)
+    return df
 
 
 def massive_inc_night(df: pd.DataFrame, var_atmo, thresh) -> pd.DataFrame:
+    """_summary_
+
+    Args:
+        df (pd.DataFrame): _description_
+        var_atmo (_type_): _description_
+        thresh (_type_): _description_
+
+    Returns:
+        pd.DataFrame: _description_
+    """
     d = (df.day == 2) | (df.day == 3)
     df2 = df[(df.time_relSR <= 1) & d & (df["diff"] > 300)]
 
@@ -365,7 +433,7 @@ def warm_day_inc(df: pd.DataFrame, thresh: int) -> pd.DataFrame:
     return df
 
 
-def get_encoding(ds: xr.Dataset) -> dict:
+def get_encoding(ds: xr.Dataset) -> Dict:
     """[get the encoding dictionary ]
 
     Args:
@@ -490,7 +558,6 @@ def main(
         day1 = (day_today - timedelta(days=1)).isoformat()[0:10]
         day2 = day_today.isoformat()[0:10]
         day3 = (day_today + timedelta(days=1)).isoformat()[0:10]
-        day4 = (day_today + timedelta(days=2)).isoformat()[0:10]
         print(
             "Site = ",
             site,

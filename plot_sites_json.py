@@ -15,7 +15,6 @@ import grp
 import xarray as xr
 import pandas as pd
 import numpy as np
-import netCDF4 as nc
 
 from solartime import (
     SolarTime,
@@ -51,7 +50,18 @@ def list_files(dir: str) -> List:
 def average_dataframe(
     list_files: List,
 ) -> Tuple(str, str, pd.DatetimeIndex, pd.DatetimeIndex, pd.DataFrame):
+    """_summary_
 
+    Args:
+        list_files (List,): _description_
+        str (_type_): _description_
+        pd (_type_): _description_
+        pd (_type_): _description_
+        pd (_type_): _description_
+
+    Returns:
+        _type_: _description_
+    """
     with xr.open_mfdataset(list_files) as ds:
         df = ds.to_dataframe()
         df.reset_index(drop=True, level=0, inplace=True)
@@ -125,21 +135,21 @@ def average_dataframe(
 
 
 def main(
-    site_name: Path,
-    path_all_years: Path,
-    month: Path,
-    site_o: Path,
-    inst: Path,
-    inst_id: Path,
-    VL2B: Path,
+    site_name: str,
+    path_all_years: str,
+    month: str,
+    site_o: str,
+    inst: str,
+    inst_id: str,
+    VL2B: str,
 ) -> None:
     """_summary_
 
     Args:
-        site_name (Path): Instrument's site name
-        path_all_years (Path): Path of the L2B concatenated files
-        month (Path): Chosen month to create the json files
-        site_o (Path): Output path for the json files
+        site_name (str): Instrument's site name
+        path_all_years (str): Path of the L2B concatenated files
+        month (str): Chosen month to create the json files
+        site_o (str): Output path for the json files
         inst (Path): Instrument's name 
         inst_id (Path): Instrument id's name 
         VL2B (Path): Version of the L2B files 
@@ -147,11 +157,6 @@ def main(
     Returns:
         _type_: _description_
     """
-    ## CHECK IF ARGUMENTS ARE READABLE/WRITABLE
-    click.echo(click.format_filename(site_name))
-    click.echo(click.format_filename(path_all_years))
-    click.echo(click.format_filename(month))
-    click.echo(click.format_filename(site_o))
     # List all th concatenated L2B files
     list_concat_L2B = list_files(path_all_years)
     # Get an averaging dataframe
