@@ -111,10 +111,10 @@ def Get_coverage(ds: xr.Dataset, var: str):
 
     Args:
         ds (xr.Dataset): xarray dataset 
-        var (str): variable to cheose 
+        var (str): variable to chose 
 
     Returns:
-        _type_: _description_
+        _type_: min and max values of the variable
     """
     list_var = list(ds.keys())
     list_dim = list(ds.coords)
@@ -132,12 +132,11 @@ def cold_day_inc(df: pd.DataFrame, thresh) -> pd.DataFrame:
     """_summary_
 
     Args:
-        df (_type_): _description_
-        var_atmo (_type_): _description_
-        thresh (_type_): _description_
+        df (_type_): dataframe
+        thresh (_type_): threshold (in m) typical of a strong increase
 
     Returns:
-        _type_: _description_
+        _type_: flaggued dataframe
     """
     d = df.day == 2
     df2 = df[(df.time_relSR > 0) & (df["diff"] > thresh) & d]
@@ -164,8 +163,8 @@ def cold_morn_inc(df: pd.DataFrame, thresh: int) -> pd.DataFrame:
     """_summary_
 
     Args:
-        df (_type_): _description_
-        thresh (_type_): _description_
+        df (_type_): dataframe
+        thresh (_type_): threshold (in m) typical of a strong increase
 
     Returns:
         _type_: _description_
@@ -204,12 +203,11 @@ def massive_dec_night(df: pd.DataFrame, thresh) -> pd.DataFrame:
     """_summary_
 
     Args:
-        df (_type_): _description_
-        var_atmo (_type_): _description_
-        thresh (_type_): _description_
+        df (_type_): dataframe
+        thresh (_type_): threshold (in m) typical of a strong decrease (absolute value)
 
     Returns:
-        _type_: _description_
+        _type_: flaggued dataframe
     """
     d = (df.day == 2) | (df.day == 3)
     df2 = df[(df.time_relSR < 0.25) & d & (df["diff"] < thresh)]
@@ -239,10 +237,10 @@ def stuck_mlh(df: pd.DataFrame) -> pd.DataFrame:
     """_summary_
 
     Args:
-        df (_type_): _description_
+        df (_type_): dataframe
 
     Returns:
-        _type_: _description_
+        _type_: flaggued dataframe
     """
     d = df.day == 2
     daytime = (df.time_relSR > 5) & d
@@ -280,7 +278,7 @@ def create_df3day(day_1a: Path, day_2a: Path, day_3a: Path) -> pd.DataFrame:
         day_3a (str): Path of the J+1 L2A file 
 
     Returns:
-        pd.datadrame : merged dataframe of these 3 files 
+        pd.dataframe : merged dataframe of these 3 files 
     """
     isFile1, isFile2, isFile3 = (
         os.path.isfile(day_1a),
@@ -339,11 +337,11 @@ def massive_inc_night(df: pd.DataFrame, thresh) -> pd.DataFrame:
     """_summary_
 
     Args:
-        df (pd.DataFrame): _description_
-        thresh (_type_): _description_
+        df (pd.DataFrame): dataframe
+        thresh (_type_): threshold (in m) typical of a strong increase
 
     Returns:
-        pd.DataFrame: _description_
+        pd.DataFrame: flaggued dataframe
     """
     d = (df.day == 2) | (df.day == 3)
     df2 = df[(df.time_relSR <= 1) & d & (df["diff"] > 300)]
@@ -389,14 +387,14 @@ def warm_day_inc(df: pd.DataFrame, thresh: int) -> pd.DataFrame:
     """_summary_
 
     Args:
-        df (_type_): _description_
-        thresh (_type_): _description_
+        df (_type_): dataframe
+        thresh (_type_): threshold (in m) typical of a strong increase
 
     Returns:
-        _type_: _description_
+        _type_: flaggued dataframe
     """
     d = df.day == 2
-    df2 = df[(df.time_relSR > 0) & (df["diff"] > thresh) & d]  ##thresh = 800
+    df2 = df[(df.time_relSR > 0) & (df["diff"] > thresh) & d]  
     h = df["diff"] > thresh
     t = df["time_relSR"] > 0
     l = df["diff"] < -(thresh - 100)
