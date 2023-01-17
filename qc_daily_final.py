@@ -704,9 +704,9 @@ def main(
 
         ## MASSIVE INCREASE AT NIGHT
 
-        ## fonction qui prend en argument le df, la colonne df.MLH, le seuil caractéristique d'une augmentation, et qui renvoit un df flaggué
+        ## fonction qui prend en argument le df, le seuil caractéristique d'une augmentation, et qui renvoit un df flaggué
 
-        df = massive_inc_night(df, 250)
+        df = massive_inc_night(df, 250) #250 instead of 300 for CABAM because 15min averaging 
 
         ## MASSIVE DECREASE AT NIGHT
 
@@ -725,9 +725,8 @@ def main(
                 if (i - idx2) <= timedelta(minutes=120):
                     df["diff"][i] = df.MLH[i] - df.MLH[idx2]
 
-        ## INCREASE - COLD SEASONS MORNINGS
 
-        # d = df.day == 2
+        ## INCREASE - MORNINGS & DAY
 
         if warm == False:
 
@@ -753,7 +752,7 @@ def main(
                 + 100
             )
 
-        ## EXTREME POINTS
+        ## GENERAL EXTREME POINTS
 
         df.FLAG_QC[df.MLH > maxmlh] = df.FLAG_QC[df.MLH > maxmlh] + 100
 
@@ -761,7 +760,7 @@ def main(
 
         ## RESIDUAL LAYER
 
-        # MAM JJA
+        # AM JJA S
 
         if warm == True:
             ii = (df.time_relSS > 2) & (df.time_relSR < 2)
@@ -786,7 +785,7 @@ def main(
                         + 10000
                     )
 
-        # SON DJF
+        # ON DJF M
         else:
             ii = (df.time_relSS > 2) & (df.time_relSR < 2)
             df2 = (
@@ -865,8 +864,6 @@ def main(
 
         ds.attrs["comment"] = "Mixed layer height after quality control; Git repository : git@gitlab.in2p3.fr:mvanhove/qc-sf-python.git"
 
-        # repo = git.Repo('/home/mvanhove/STRATfinder/scripts/qc-sf-python/')
-        # Write the history about the commited script
         dir_path = os.path.dirname(os.path.realpath(f"{sys.argv[0]}"))
         repo = git.Repo(f"{dir_path}")
         sha = repo.head.commit.hexsha
@@ -889,8 +886,6 @@ def main(
         print(f"output file created : {output_day2a}")
 
         ## CLOSE FILES
-
-        # sys.exit(0)
     return 0
 
 
