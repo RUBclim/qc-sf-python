@@ -438,11 +438,11 @@ def massive_dec_night(df, var_atmo, thresh):
             if df[t & d & (df.MLH < 500) & (df.index < idx)].index.max() is not pd.NaT:
                 a = df[t & d & (df.MLH < 500) & (df.index < idx)].index.max()
                 a = a + timedelta(minutes=15)
-                idx = idx - timedelta(minutes=15)
+                #idx = idx - timedelta(minutes=15)
                 ind += df[a:idx].index.to_list()
 
             else:
-                idx = idx - timedelta(minutes=15)
+                #idx = idx - timedelta(minutes=15)
                 ind += df[s:idx].index.to_list()
 
     df["FLAG_QC"][ind] = df["FLAG_QC"][ind] + 100
