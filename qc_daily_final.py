@@ -458,6 +458,24 @@ def conv_np64dt_to_dt(time_np64: np.datetime64) -> datetime.utcfromtimestamp:
     ts = datetime.utcfromtimestamp(ts)
     return ts
 
+def Change_dims(ds:xr.Dataset) -> xr.Dataset :
+    """Change the type of station_name and platform_id from char to string, and
+        erase the station dimension and replace it by station_name. 
+
+    Args:
+        ds (xr.Dataset): dataset to read
+
+    Returns:
+        xr.Dataset: _dataset with naw dimension 
+    """    
+    ds["station_name"] = ds["station_name"].astype(str)
+    ds["platform_id"] = ds["platform_id"].astype(str)
+    ds = ds.squeeze(dim="station")
+    ds = ds.drop_vars("station")
+    ds = ds.expand_dims(dim="station_name")
+    ds = ds.assign_coords({"station_name":ds["station_name"]})
+    ds = ds.transpose()
+    return ds 
 
 ## CHECK IF ARGUMENTS ARE READABLE/WRITABLE
 
@@ -535,15 +553,7 @@ def main(
         lon = ds["station_longitude"][0].values
         ds = clean_time_array(ds)
         # Get the encoding for the variable
-        ds2_enco = get_encoding(ds)
-        ds2_enco["time"] = {
-            "calendar": "standard",
-            "dtype": "double",
-            "_FillValue": None,
-            "units": ds["time"].encoding["units"] + "UTC",
-        }  
-        ds2_enco["MLH"] = {"dtype": ds["MLH"].encoding["dtype"], "_FillValue": "-999"}
-        ds2_enco["FLAG"] = {"_FillValue": -999}
+
         # from dataset to dataframe
         df_day_2 = ds.to_dataframe()
         df_day_2 = df_day_2.reset_index(level=0, drop=True)
@@ -873,12 +883,21 @@ def main(
 
         ## CREATE NETCDF L2B
 
-        ds["time"].attrs["long_name"] = "time"
         ds = ds.sel(time=slice(day2, day2))
-        ds = ds.transpose("time", "station")
+        ds = Change_dims(ds)
+        ds2_enco = get_encoding(ds)
+        ds2_enco["time"] = {
+            "calendar": "standard",
+            "dtype": "double",
+            "long_name":"time",
+            "_FillValue": None,
+            "units": ds["time"].encoding["units"] + "UTC",
+        }  
+        ds2_enco["MLH"] = {"dtype": ds["MLH"].encoding["dtype"], "_FillValue": "-999"}
+        ds2_enco["FLAG"] = {"_FillValue": -999}
         uid = pwd.getpwnam("eprofile").pw_uid
         gid = grp.getgrnam("eprofile").gr_gid
-        ds.to_netcdf(output_day2a, encoding=ds2_enco, mode="w", engine="netcdf4")
+        ds.to_netcdf(output_day2a, encoding=ds2_enco, mode="w", engine="netcdf4",unlimited_dims=["time","station_name"])
         os.chmod(output_day2a, 0o644)
         os.chown(output_day2a, uid, gid)
         print(f"output file created : {output_day2a}")
