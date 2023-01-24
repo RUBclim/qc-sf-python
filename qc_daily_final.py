@@ -538,13 +538,14 @@ def main(
 
     ## CONFIGURATION
     today = date.today()
+    #today = datetime.date.today()
+
     date_today = today.strftime("%B %d, %Y")
     maxmlh = get_maxmlh(config_filea)
     print(f"Read the file {config_filea}")
     df = create_df3day(day_1a, day_2a, day_3a)
     print("complete dataframe created")
     ndata_day2 = int(len(df) / 3)
-    warm = (month2 > 3) & (month2 < 10)
 
     with xr.open_dataset(day_2a) as ds:
         site = ds.attrs["site_location"]  ## site name given in J file
@@ -552,6 +553,8 @@ def main(
         lat = ds["station_latitude"][0].values
         lon = ds["station_longitude"][0].values
         ds = clean_time_array(ds)
+        warm = (month2 > 3) & (month2 < 10)
+
         # Get the encoding for the variable
 
         # from dataset to dataframe
@@ -560,10 +563,12 @@ def main(
         df_day_2 = df_day_2[~df_day_2.index.duplicated(keep="first")]
         df_day_2 = df_day_2.loc[df_day_2.index.dropna()]
         day_today = conv_np64dt_to_dt(ds["time"][0].values)
-        day0 = day_today - timedelta(days=2).isoformat()[0:10]
+        day0 = day_today - timedelta(days=2) #.isoformat()[0:10]
         day1 = (day_today - timedelta(days=1)).isoformat()[0:10]
         day2 = day_today.isoformat()[0:10]
         day3 = (day_today + timedelta(days=1)).isoformat()[0:10]
+        day4 = (day_today + timedelta(days=2)).isoformat()[0:10]
+
         print(
             "Site = ",
             site,
@@ -587,13 +592,13 @@ def main(
         ## TIME RELATIVE TO SUNRISE/SUNSET
 
         sun = SolarTime()
-        date = date(day0.year, day0.month, day0.day)
+        date_ = date(day0.year, day0.month, day0.day)
         sunrise, sunset = [], []
 
         for i in range(
             5
         ):  ## 5 : because we need SR & SS at day J-2, J-1, J, J+1 et J+2
-            schedule = sun.sun_utc(date, lat, lon)
+            schedule = sun.sun_utc(date_, lat, lon)
 
             sunrise1 = (
                 schedule["sunrise"].second
@@ -611,7 +616,7 @@ def main(
 
             sunrise.append(sunrise1)
             sunset.append(sunset1)
-            date = date + timedelta(days=1)
+            date_ = date_ + timedelta(days=1)
 
         ## COLUMNS 'time relative to sunrise', 'time relative to sunset' AND 'day defined from sunset to sunset' 
 
@@ -882,24 +887,31 @@ def main(
         print("MLH replaced, FLAG added, History added")
 
         ## CREATE NETCDF L2B
-
-        ds = ds.sel(time=slice(day2, day2))
-        ds = Change_dims(ds)
-        ds2_enco = get_encoding(ds)
+        
+        ds2 = xr.open_dataset(day_2a)
+        ds2_enco = get_encoding(ds2)
         ds2_enco["time"] = {
             "calendar": "standard",
             "dtype": "double",
-            "long_name":"time",
             "_FillValue": None,
-            "units": ds["time"].encoding["units"] + "UTC",
         }  
-        ds2_enco["MLH"] = {"dtype": ds["MLH"].encoding["dtype"], "_FillValue": "-999"}
+        
+        ds2_enco["MLH"] = {"dtype": ds2["MLH"].encoding["dtype"], "_FillValue": "-999"}
         ds2_enco["FLAG"] = {"_FillValue": -999}
-        uid = pwd.getpwnam("eprofile").pw_uid
-        gid = grp.getgrnam("eprofile").gr_gid
-        ds.to_netcdf(output_day2a, encoding=ds2_enco, mode="w", engine="netcdf4",unlimited_dims=["time","station_name"])
-        os.chmod(output_day2a, 0o644)
-        os.chown(output_day2a, uid, gid)
+        del ds2_enco["station"]
+
+        #uid = pwd.getpwnam("eprofile").pw_uid
+        #gid = grp.getgrnam("eprofile").gr_gid
+        ds = ds.sel(time=slice(day2, day2))
+        ds = Change_dims(ds)
+        ds2_enco["platform_id"] = ds["platform_id"].encoding
+        ds2_enco["station_name"] = ds["station_name"].encoding
+        ds.time.encoding["units"] = ds2["time"].encoding["units"] + "UTC"
+        ds.time.attrs["long_name"] = "time"
+        ds.to_netcdf(output_day2a, encoding=ds2_enco, mode="w", engine="netcdf4", unlimited_dims=["time","station_name"])
+
+        #os.chmod(output_day2a, 0o644)
+        #os.chown(output_day2a, uid, gid)
         print(f"output file created : {output_day2a}")
 
         ## CLOSE FILES
