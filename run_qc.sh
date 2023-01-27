@@ -26,14 +26,14 @@ source activate /home/jupyterweb/python_envs/pangeo/
 site='lindenberg'
 
 #liste_2022_falkenberg=`ls /homedata/mvanhove/STRATfinder/2022/falkenberg/v2022c/eprofile_1a_LfalkenbergIchm15k_v01_202?????_000011_L2A_v2022c_2weights_os.nc` 
-liste_2022_lindenberg=`ls /homedata/mvanhove/L2A/lindenberg/eprofile_L2A_STRATFINDER_lindenberg_chm15k-0_v01_2022????.nc`
+liste_2022_lindenberg=`ls /homedata/mvanhove/L2A/lindenberg/eprofile_L2A_STRATFINDER_lindenberg_chm15k-0_v01_20220[2-9]*.nc`
 #liste_2022_hdv=`ls /homedata/mvanhove/CL61/HDV/stratfinder_v2022c/cl61_1a_LHdVPpr2R5mF30s_v01_20220???_000000_L2A_180m_v2022c_2weights_os.nc`
 
 
 arr=($liste_2022_lindenberg)
 
 day1='nothing'
-day3='/homedata/mvanhove/L2A/lindenberg/eprofile_L2A_STRATFINDER_lindenberg_chm15k-0_v01_20220202.nc'
+day3='/homedata/mvanhove/L2A/lindenberg/eprofile_L2A_STRATFINDER_lindenberg_chm15k-0_v01_20220217.nc'
 #day3='/homedata/mvanhove/CL61/HDV/stratfinder_v2022c/cl61_1a_LHdVPpr2R5mF30s_v01_20220602_000000_L2A_180m_v2022c_2weights_os.nc'
 #day3='nothing'
 
@@ -43,7 +43,7 @@ iter=1
 #do
 #for file in /homedata/mvanhove/CL61_urbisphere/CL61_Berlin/new_data/raw2l1_set\(de.berlin.BETEMP\,ALC_T*\,20220729T000000_20220730T000000\)_version\(v1.0.1_L2A_120m_v2022a.nc
 #do
-for file in /homedata/mvanhove/L2A/lindenberg/eprofile_L2A_STRATFINDER_lindenberg_chm15k-0_v01_2022020[1-3].nc
+for file in /homedata/mvanhove/L2A/lindenberg/eprofile_L2A_STRATFINDER_lindenberg_chm15k-0_v01_20220216.nc
 do
 #for file in /homedata/mvanhove/CL61/HDV/stratfinder_v2022c/cl61_1a_LHdVPpr2R5mF30s_v01_20220*_000000_L2A_180m_v2022c_2weights_os.nc
 #do
