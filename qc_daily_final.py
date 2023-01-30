@@ -170,7 +170,7 @@ def rain_filter(df: pd.DataFrame) -> pd.DataFrame:
 
 
 
-def day_peaks(df: pd.DataFrame, thresh, time_range, mov_sum_step) -> pd.DataFrame:
+def day_peaks(df: pd.DataFrame, thresh, time_range, mov_sum_step, when) -> pd.DataFrame:
     """remove massive increases during daytime in cold seasons
 
     Args:
@@ -185,8 +185,10 @@ def day_peaks(df: pd.DataFrame, thresh, time_range, mov_sum_step) -> pd.DataFram
     print('day_peaks function with mov_sum_step = ', mov_sum_step)
     cond_increase = (mov_sum > thresh) & (mov_sum < thresh*2)
     cond_decrease = mov_sum < -thresh + 100
-    df2 = df[(df.time_relSR > 0) & (cond_increase == True) & d]
-
+    if when == 'end afternoon' :
+        df2 = df[(df.time_relSR > 0) & (cond_increase == True) & d & (df.time_relSS >= -3)]
+    else :
+        df2 = df[(df.time_relSR > 0) & (cond_increase == True) & d]
     l = cond_decrease == True
     t = df["time_relSR"] > 0
     ind = []
@@ -948,12 +950,12 @@ def main(
                     df["diff"][i] = df.MLH[i] - df.MLH[idx2]
 
         if warm == False:
-            df = day_peaks(df, 1000, 180, 4)
-            df = day_peaks(df, 400, 120, 3)
+            df = day_peaks(df, 1000, 180, 4, 'all day')
+            df = day_peaks(df, 400, 120, 3, 'all day')
             df = cold_day_dec(df, -1500)
         else:  
-            df = day_peaks(df, 500, 180, 4) # 1000m instead of 500m because was removing 06/02/22 in Granada 
-            df = day_peaks(df, 400, 120, 3)
+            df = day_peaks(df, 500, 180, 4, 'end afternoon') # 1000m instead of 500m because was removing 06/02/22 in Granada 
+            df = day_peaks(df, 400, 120, 3, 'all day')
 
         if summer == True :
             df = massive_inc_afternoon(df, 500, 2, 2) #2 or 4 ? might apply this in winter because of 13/02/22 Granada, 06/03/22,  
