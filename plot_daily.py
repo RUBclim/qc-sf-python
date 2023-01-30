@@ -17,7 +17,6 @@ from pathlib import Path
 from solartime import SolarTime
 
 
-<<<<<<< HEAD
 ## ARGUMENTS : L2A,  L2B, SITE, FICHIER DE SORTIE QL 
 
 l2a = sys.argv[1]  
@@ -234,4 +233,4 @@ def main(l2a: Path, l2b: Path, output: Path) -> None:
 
 if __name__ == "__main__":
     sys.exit(main())
->>>>>>> develop
+
