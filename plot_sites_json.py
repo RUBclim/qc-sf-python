@@ -2,223 +2,304 @@
 
 import os
 import sys
-import click 
+import click
 import pathlib
 import json
 import git
 import glob
-
+from typing import Tuple, List
+from pathlib import Path
 from datetime import date, timedelta
-
+import pwd
+import grp
 import xarray as xr
-import pandas as pd 
+import pandas as pd
 import numpy as np
-import netCDF4 as nc
 
-from solartime import SolarTime               ## to be replaced by pvlib if more problems encountered, works for now
+from solartime import (
+    SolarTime,
+)  ## to be replaced by pvlib if more problems encountered, works for now
 
-pd.options.mode.chained_assignment = None     ## Warning avoid : ' SettingWithCopyWarning ' 
+pd.options.mode.chained_assignment = None  ## Warning avoid : ' SettingWithCopyWarning '
 
-
-
-##ARGUMENTS
-site = sys.argv[1]
-print('site in python script = ', site)
-
-path_all_years = sys.argv[2] #/homedata/mvanhove/STRATfinder/2*/{site}/ANNUAL/stratfinder_2b_{site}PmlhF1min_v01_*_V2022a.nc
-
-df = xr.open_mfdataset(glob.glob(f"{path_all_years}/2*/{site}/ANNUAL/stratfinder_2b_{site}PmlhF1min_v01_*_V2022a.nc")).to_dataframe()
-df.reset_index(drop=True, level=0, inplace=True)
-df = df[df.index.duplicated() == False]
-
-month = sys.argv[3]
-output = sys.argv[4]    ## fichier contenant la donnée saisonnière json 
+__version__ = "1.0.0"
+__author__ = "Melania Van Hove"
 
 
+#################################################################################################################################
+#############################################FUNCTION############################################################################
+#################################################################################################################################
 
-## CHECK IF ARGUMENTS ARE READABLE/WRITABLE
+
+def list_files(dir: str) -> List:
+    """[list the files inside the directory]
+
+    Args:
+        dir ([str]): [directory to list file inside of it ]
+
+    Returns:
+        [list]: [list of files inside of directory ]
+    """
+    file_list = []
+    for dirs, subdirs, files in os.walk(dir):
+        for file in files:
+            file_list.append(os.path.join(dirs, file))
+    return file_list
+
+
+def average_dataframe(
+    list_files: List,
+) -> Tuple(str, str, pd.DatetimeIndex, pd.DatetimeIndex, pd.DataFrame):
+    """_summary_
+
+    Args:
+        list_files (List,): _description_
+        str (_type_): _description_
+        pd (_type_): _description_
+        pd (_type_): _description_
+        pd (_type_): _description_
+
+    Returns:
+        _type_: _description_
+    """
+    with xr.open_mfdataset(list_files) as ds:
+        df = ds.to_dataframe()
+        df.reset_index(drop=True, level=0, inplace=True)
+        df = df[df.index.duplicated() == False]
+        lat, lon = df["station_latitude"][0], df["station_longitude"][0]
+
+        ave_df = df.copy()
+
+        start_date = ave_df.index.date[0]
+        end_date = ave_df.index.date[len(ave_df) - 2]
+
+        ## AVERAGING OVER 15 MIN AND FILL TIME MISSING
+
+        ave_df = ave_df.resample("15min").mean()
+        ave_df.index = pd.to_datetime(ave_df.index.values) + timedelta(minutes=15)
+        ave_df.index = ave_df.index.set_names(["time"])
+
+        df2 = pd.date_range(start_date, end_date + timedelta(days=1), freq="15min")
+        df2 = df2.to_frame(index=True, name=None)
+        df2.index.names = ["time"]
+        ave_df = pd.merge(ave_df, df2, how="right", right_index=True, left_index=True)
+        ave_df.drop(index=ave_df.index[0], axis=0, inplace=True)
+
+        ## IN CASE DATAFRAME DOESNT START/END AT MIDNIGHT
+        df2 = pd.date_range(start_date, end_date, freq="15min")
+        df2 = df2.to_frame(index=True, name=None)
+        df2.index.names = ["time"]
+        ave_df = pd.merge(ave_df, df2, how="right", right_index=True, left_index=True)
+        ave_df.drop(index=ave_df.index[0], axis=0, inplace=True)
+        return lat, lon, start_date, end_date, ave_df
+
+
+#################################################################################################################################
+#############################################ARGUMENT############################################################################
+#################################################################################################################################
+
 
 @click.command()
-
+# name of the instrument's site
 @click.argument(
-    "site_name",
-    nargs=1,
+    "site_name", nargs=1,
+)
+# Path of the Release files
+@click.argument(
+    "path_all_years", nargs=1,
+)
+# Month of the json files
+@click.argument(
+    "month", nargs=1,
+)
+# Output directory
+@click.argument(
+    "site_o", nargs=1,
+)
+# instrument's type
+@click.argument(
+    "inst", nargs=1,
+)
+# Instrument id
+@click.argument(
+    "inst_id", nargs=1,
+)
+# Version of the Release
+@click.argument(
+    "VL2B", nargs=1,
 )
 
-@click.argument(
-    "path_all_years",
-    nargs=1,
-)
-
-@click.argument(
-    "month",
-    nargs=1,
-)
-
-@click.argument(
-    "site_o",
-    nargs=1,
-    type=click.Path(
-       exists = False, readable = True, file_okay = True, dir_okay = False, resolve_path = True
-    ),
-)
+#################################################################################################################################
+#############################################MAIN################################################################################
+#################################################################################################################################
 
 
-def main(site_name, path_all_years, month, site_o):
-    click.echo(click.format_filename(site_name))
-    click.echo(click.format_filename(path_all_years))
-    click.echo(click.format_filename(month))
-    click.echo(click.format_filename(site_o))
-    
+def main(
+    site_name: str,
+    path_all_years: str,
+    month: str,
+    site_o: str,
+    inst: str,
+    inst_id: str,
+    VL2B: str,
+) -> None:
+    """_summary_
 
-if __name__ == "__main__":
-    main(standalone_mode=False)
+    Args:
+        site_name (str): Instrument's site name
+        path_all_years (str): Path of the L2B concatenated files
+        month (str): Chosen month to create the json files
+        site_o (str): Output path for the json files
+        inst (Path): Instrument's name 
+        inst_id (Path): Instrument id's name 
+        VL2B (Path): Version of the L2B files 
 
+    Returns:
+        _type_: _description_
+    """
+    # List all th concatenated L2B files
+    list_concat_L2B = list_files(path_all_years)
+    # Get an averaging dataframe
+    lat, lon, start_date, end_date, ave_df = average_dataframe(list_concat_L2B)
+    ## TIME RELATIVE TO SUNRISE DEFINITION
+    sun = SolarTime()
 
+    date = start_date - timedelta(days=1)
+    sunrise = []
+    sunset = []
 
-## CONFIGURATION
-
-
-#ds = nc.Dataset(globals()['input_%s' % site])
-lat, lon =df['station_latitude'][0], df['station_longitude'][0]
-
-ave_df = df.copy()
-
-start_date = ave_df.index.date[0]
-end_date = ave_df.index.date[len(ave_df)-2]
-
-
-## AVERAGING OVER 15 MIN AND FILL TIME MISSING
-
-ave_df = ave_df.resample("15min").mean()
-ave_df.index = pd.to_datetime(ave_df.index.values) + timedelta(minutes=15)
-ave_df.index = ave_df.index.set_names(['time'])
-    
-df2 = pd.date_range(start_date, end_date + timedelta(days=1), freq="15min")
-df2 = df2.to_frame(index=True, name=None)
-df2.index.names = ["time"]
-ave_df = pd.merge(ave_df, df2, how = "right", right_index=True, left_index = True)
-ave_df.drop(index=ave_df.index[0], axis=0, inplace=True)
-
-## IN CASE DATAFRAME DOESNT START/END AT MIDNIGHT
-df2 = pd.date_range(start_date, end_date, freq="15min")
-df2 = df2.to_frame(index=True, name=None)
-df2.index.names = ["time"]
-ave_df = pd.merge(ave_df, df2, how = "right", right_index=True, left_index = True)
-ave_df.drop(index=ave_df.index[0], axis=0, inplace=True)
-
-
-
-## TIME RELATIVE TO SUNRISE DEFINITION
-
-
-
-sun = SolarTime()
-
-date = start_date - timedelta(days=1)
-sunrise = []
-sunset = []
-
-while date <= (end_date): # + timedelta(days=1)) :
+    while date <= (end_date):  # + timedelta(days=1)) :
         schedule = sun.sun_utc(date, lat, lon)
-        sunrise1 = (schedule['sunrise'].second + 60*schedule['sunrise'].minute + 3600*schedule['sunrise'].hour)/3600. #en heure
-        sunrise1 = 0.25 * (round(4.0 * sunrise1))  #en heure arrondie au quart d'heure le plus proche
-        sunset1 = (schedule['sunset'].second + 60*schedule['sunset'].minute + 3600*schedule['sunset'].hour)/3600.
+        sunrise1 = (
+            schedule["sunrise"].second
+            + 60 * schedule["sunrise"].minute
+            + 3600 * schedule["sunrise"].hour
+        ) / 3600.0  # en heure
+        sunrise1 = 0.25 * (
+            round(4.0 * sunrise1)
+        )  # en heure arrondie au quart d'heure le plus proche
+        sunset1 = (
+            schedule["sunset"].second
+            + 60 * schedule["sunset"].minute
+            + 3600 * schedule["sunset"].hour
+        ) / 3600.0
         sunset1 = 0.25 * (round(4.0 * sunset1))
         sunrise.append(sunrise1)
         sunset.append(sunset1)
         date = date + timedelta(days=1)
-        
-print(schedule, sunrise1, sunset1)
 
+    print(schedule, sunrise1, sunset1)
 
-time = [i/4. for i in range(1, 97)]#*(end_date - start_date).days
-dt=[]
+    time = [i / 4.0 for i in range(1, 97)]  # *(end_date - start_date).days
+    dt = []
 
-for j in range(1, len(sunrise)-1):
-    for i in range(96):
-        if time[i] < sunset[j] :
-            dt.append(time[i]-sunrise[j])
-        else :
-            dt.append(-(24-time[i] + sunrise[j+1]))
-            
+    for j in range(1, len(sunrise) - 1):
+        for i in range(96):
+            if time[i] < sunset[j]:
+                dt.append(time[i] - sunrise[j])
+            else:
+                dt.append(-(24 - time[i] + sunrise[j + 1]))
 
-ave_df.insert(2,'time_relSR', dt)
+    ave_df.insert(2, "time_relSR", dt)
 
+    ss = []
+    for j in range(len(sunset) - 2):
+        for i in range(96):
+            if time[i] < sunrise[j + 1]:
+                ss.append((24 - sunset[j] + time[i]))
+            else:
+                ss.append(time[i] - sunset[j + 1])
 
-ss = []
-for j in range(len(sunset)-2):
-    for i in range(96):
-        if time[i] < sunrise[j+1] :
-            ss.append((24-sunset[j] + time[i]))
+    ave_df.insert(3, "time_relSS", ss)
+
+    # OTHER INDEXES
+
+    n = 1
+    day = [1]
+
+    for i in range(1, len(ave_df)):
+        if dt[i - 1] > 0 and dt[i] < 0:
+            day.append(n + 1)
+            n = n + 1
         else:
-            ss.append(time[i]-sunset[j+1])
-            
+            day.append(n)  # day relative to sunrise/sunset
 
-ave_df.insert(3,'time_relSS', ss)
+    ave_df.insert(4, "day", day)
 
-# OTHER INDEXES
+    ## MEDIAN VALUES
 
-n=1
-day=[1]
+    if site_name == "palaiseau":
+        lim = 100  # int(len(ave_df)/1500)
+    else:
+        lim = 0
 
-for i in range(1, len(ave_df)):
-    if dt[i-1]>0 and dt[i]<0 :
-        day.append(n+1)
-        n=n+1
-    else :
-        day.append(n)           #day relative to sunrise/sunset
+    df_final = (
+        ave_df[ave_df.index.month == int(month)]
+        .groupby("time_relSR", as_index=False)
+        .agg(
+            mlh_med=(
+                "MLH",
+                lambda x: x.median() if ((np.isnan(x) == False).sum() > lim) else None,
+            ),
+            mlh_q1=(
+                "MLH",
+                lambda x: x.quantile(0.25)
+                if ((np.isnan(x) == False).sum() > lim)
+                else None,
+            ),
+            mlh_q3=(
+                "MLH",
+                lambda x: x.quantile(0.75)
+                if ((np.isnan(x) == False).sum() > lim)
+                else None,
+            ),
+        )
+    )
+
+    df_final.set_index("time_relSR", inplace=True)
+
+    month_lab_list = [
+        " ",
+        "jan",
+        "feb",
+        "mar",
+        "apr",
+        "may",
+        "jun",
+        "jul",
+        "aug",
+        "sep",
+        "oct",
+        "nov",
+        "dec",
+    ]
+    month_lab = month_lab_list[int(month)]
+
+    data = {
+        "title": f"MLH_{month_lab}_{site_name}_Stratfinder",
+        "time": list(df_final.index),
+        "mlh_med": list(df_final.mlh_med),
+        "mlh_q1": list(df_final.mlh_q1),
+        "mlh_q3": list(df_final.mlh_q3),
+        "label_x": "time relative to SR [h]",
+        "label_y": "MLH median [magl]",
+    }
+
+    ## JSON FILE
+    outfile = (
+        f"eprofile_cycle_STRATFINDER_{site_name}_{inst}_{inst_id}_{VL2B}_{month}.json"
+    )
+    # json file loacation
+    uid = pwd.getpwnam("eprofile").pw_uid
+    gid = grp.getgrnam("eprofile").gr_gid
+    output = f"{site_o}/{outfile}"
+    with open(f"{output}", "w") as f:
+        json.dump(data, f)
+    os.chmod(output, 0o644)
+    os.chown(output, uid, gid)
+
+    return 0
 
 
-ave_df.insert(4, 'day', day)
-
-
-
-## MEDIAN VALUES
-
-if site == 'palaiseau' :
-    lim = 100 # int(len(ave_df)/1500)
-else :
-    lim = 0
-
-df_final = ave_df[ave_df.index.month == int(month)].groupby('time_relSR', as_index=False).agg(mlh_med = ("MLH" , lambda x : x.median() if ((np.isnan(x)==False).sum() > lim) else None), mlh_q1 = ("MLH" , lambda x : x.quantile(0.25) if ((np.isnan(x)==False).sum() > lim) else None), mlh_q3 = ("MLH" , lambda x : x.quantile(0.75) if ((np.isnan(x)==False).sum() > lim) else None))
-
-
-df_final.set_index('time_relSR', inplace=True)
-
-month_lab_list = [' ', 'jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec']
-month_lab = month_lab_list[int(month)]
-
-data = {'title' : f'MLH_{month_lab}_{site}_Stratfinder', 'time' : list(df_final.index), 'mlh_med': list(df_final.mlh_med), 'mlh_q1': list(df_final.mlh_q1), 'mlh_q3': list(df_final.mlh_q3), 'label_x' : 'time relative to SR [h]', 'label_y' : 'MLH median [magl]'}
-
-
-## JSON FILE
-
-
-with open(f"{output}", 'w') as f:
-    json.dump(data, f)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+if __name__ == "__main__":
+    sys.exit(main())

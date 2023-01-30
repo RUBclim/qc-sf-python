@@ -642,6 +642,7 @@ def massive_inc_afternoon(df, thresh, time_thresh, time_bef_ss):
     print(ind)
 
     return df
+<<<<<<< HEAD
 
 
 
@@ -663,8 +664,64 @@ def get_encoding(ds: xr.Dataset) -> Dict:
     for elem in list_var_dim:
         encoded[elem] = ds[elem].encoding
     return encoded
+=======
 
 
+
+
+def get_encoding(ds: xr.Dataset) -> Dict:
+    """[get the encoding dictionary ]
+
+    Args:
+        ds ([xr.dataset]): [dataset opened ]
+
+    Returns:
+        [dict]: [dictionary containing the encoding]
+    """
+>>>>>>> develop
+
+    list_var = list(ds.keys())
+    list_dim = list(ds.coords)
+    list_var_dim = list_var + list_dim
+    encoded = {}
+    for elem in list_var_dim:
+        encoded[elem] = ds[elem].encoding
+    return encoded
+
+def conv_np64dt_to_dt(time_np64: np.datetime64) -> datetime.utcfromtimestamp:
+    """" Convert np.datetime64 to datetime.
+
+<<<<<<< HEAD
+    Args:
+        time_np64 (np.datetime64): 
+
+    Returns:
+        datetime.datetime: Converted time to the datetime.datetime class
+    """
+    ts = (time_np64 - np.datetime64("1970-01-01T00:00:00Z")) / np.timedelta64(1, "s")
+    ts = datetime.utcfromtimestamp(ts)
+    return ts
+
+def Change_dims(ds:xr.Dataset) -> xr.Dataset :
+    """Change the type of station_name and platform_id from char to string, and
+        erase the station dimension and replace it by station_name. 
+
+    Args:
+        ds (xr.Dataset): dataset to read
+
+    Returns:
+        xr.Dataset: _dataset with naw dimension 
+    """    
+    ds["station_name"] = ds["station_name"].astype(str)
+    ds["platform_id"] = ds["platform_id"].astype(str)
+    ds = ds.squeeze(dim="station")
+    ds = ds.drop_vars("station")
+    ds = ds.expand_dims(dim="station_name")
+    ds = ds.assign_coords({"station_name":ds["station_name"]})
+    ds = ds.transpose()
+    return ds 
+
+=======
 def conv_np64dt_to_dt(time_np64: np.datetime64) -> datetime.utcfromtimestamp:
     """" Convert np.datetime64 to datetime.
 
@@ -696,7 +753,11 @@ def Change_dims(ds:xr.Dataset) -> xr.Dataset :
     ds = ds.assign_coords({"station_name":ds["station_name"]})
     ds = ds.transpose()
     return ds 
+>>>>>>> develop
 
+    #################################################################################################################################
+    ############################################# END FUNCTIONS######################################################################
+    #################################################################################################################################
 
     #################################################################################################################################
     ############################################# END FUNCTIONS######################################################################
@@ -706,10 +767,14 @@ def Change_dims(ds:xr.Dataset) -> xr.Dataset :
 
 
 
+<<<<<<< HEAD
+############### CHECK IF ARGUMENTS ARE READABLE/WRITABLE ################
+=======
+>>>>>>> develop
 
 ############### CHECK IF ARGUMENTS ARE READABLE/WRITABLE ################
 
-
+<<<<<<< HEAD
 @click.command()
 # File of day -1 L2A file
 @click.argument(
@@ -849,9 +914,187 @@ def main(
             sunrise.append(sunrise1)
             sunset.append(sunset1)
             date_ = date_ + timedelta(days=1)
+=======
+
+@click.command()
+# File of day -1 L2A file
+@click.argument(
+    "day_1a",
+    nargs=1,
+    type=click.Path(
+        exists=False, readable=True, file_okay=True, dir_okay=False, resolve_path=True
+    ),
+)
+# File of d day  L2A file
+@click.argument(
+    "day_2a",
+    nargs=1,
+    type=click.Path(
+        exists=True, readable=True, file_okay=True, dir_okay=False, resolve_path=True
+    ),
+)
+# File of day + 1 L2A file
+@click.argument(
+    "day_3a",
+    nargs=1,
+    type=click.Path(
+        exists=False, readable=True, file_okay=True, dir_okay=False, resolve_path=True
+    ),
+)
+# Configuration of the configuration json file
+@click.argument(
+    "config_filea",
+    nargs=1,
+    type=click.Path(
+        exists=True, readable=True, file_okay=True, dir_okay=False, resolve_path=True
+    ),
+)
+# Output file to create the L2B files
+@click.argument(
+    "output_day2a",
+    nargs=1,
+    type=click.Path(
+        exists=False, writable=True, file_okay=True, dir_okay=False, resolve_path=True
+    ),
+)
 
 
 
+################ MAIN FUNCTION ###################
+
+def main(
+    day_1a: click.Path,
+    day_2a: click.Path,
+    day_3a: click.Path,
+    config_filea: click.Path,
+    output_day2a: click.Path,
+) -> None:
+
+    ## CHECK IF FILES 
+    click.echo(click.format_filename(day_1a))
+    click.echo(click.format_filename(day_2a))
+    click.echo(click.format_filename(day_3a))
+    click.echo(config_filea)
+    click.echo(click.format_filename(output_day2a))
+
+    ## CONFIGURATION
+    today = date.today()
+    date_today = today.strftime("%B %d, %Y")
+    maxmlh = get_maxmlh(config_filea)
+    print(f"Read the file {config_filea}")
+    df = create_df3day(day_1a, day_2a, day_3a)
+    print("complete dataframe created")
+    ndata_day2 = int(len(df) / 3)
+
+    with xr.open_dataset(day_2a) as ds:
+        site = ds.attrs["site_location"]  ## site name given in L2A by E-PROFILE
+        month2 = ds["time"].dt.month[0].values
+        warm = (month2 > 3) & (month2 < 10)
+        summer = (month2 > 5) & (month2 < 9)
+        lat = ds["station_latitude"][0].values
+        lon = ds["station_longitude"][0].values
+        ds = clean_time_array(ds)
+        df_day_2 = ds.to_dataframe()
+        df_day_2 = df_day_2.reset_index(level=0, drop=True)
+        df_day_2 = df_day_2[~df_day_2.index.duplicated(keep="first")]
+        df_day_2 = df_day_2.loc[df_day_2.index.dropna()]
+
+        day_today = conv_np64dt_to_dt(ds["time"][0].values)
+        day0 = day_today - timedelta(days=2) 
+        day1 = (day_today - timedelta(days=1)).isoformat()[0:10]
+        day2 = day_today.isoformat()[0:10]
+        day3 = (day_today + timedelta(days=1)).isoformat()[0:10]
+        day4 = (day_today + timedelta(days=2)).isoformat()[0:10]
+
+        print(
+            "Site = ",
+            site,
+            ", lat = ",
+            lat,
+            ", lon = ",
+            lon,
+            ", JourJ = ",
+            day2,
+            ", Jour J-1 = ",
+            day1,
+            ", Jour J+1 = ",
+            day3,
+        )
+
+        ## RENAME COLUMNS TO SIMPLIFY
+
+        df = df.rename(columns={"FLAG": "prof"})
+        df = df.rename(columns={"cloud_base_altitude": "CBH"})
+
+
+        ## TIME RELATIVE TO SUNRISE/SUNSET
+
+        sun = SolarTime()
+        date_ = date(day0.year, day0.month, day0.day)
+        sunrise, sunset = [], []
+
+        for i in range(
+            5
+        ):  ## 5 : because we need SR & SS at day J-2, J-1, J, J+1 et J+2
+            schedule = sun.sun_utc(date_, lat, lon)
+
+            sunrise1 = (
+                schedule["sunrise"].second
+                + 60 * schedule["sunrise"].minute
+                + 3600 * schedule["sunrise"].hour
+            ) / 3600.0  ## sunrise in hour
+            sunrise1 = 0.25 * (round(4.0 * sunrise1))  ## round to closer quarter hour
+
+            sunset1 = (
+                schedule["sunset"].second
+                + 60 * schedule["sunset"].minute
+                + 3600 * schedule["sunset"].hour
+            ) / 3600.0  ## sunset in hour
+            sunset1 = 0.25 * (round(4.0 * sunset1))  ## round to closer quarter hour
+>>>>>>> develop
+
+            sunrise.append(sunrise1)
+            sunset.append(sunset1)
+            date_ = date_ + timedelta(days=1)
+
+
+        ## COLUMNS 'time_relSR' : time relative to sunrise; 'time_relSS' : time relative to sunset; 'day' : from sunset to sunset
+
+<<<<<<< HEAD
+        Time = [i / 4.0 for i in range(1, ndata_day2 + 1)]
+        dt = []
+
+        for j in range(1, len(sunrise) - 1):
+            for i in range(ndata_day2):
+                if Time[i] < sunset[j]:
+                    dt.append(Time[i] - sunrise[j])
+                else:
+                    dt.append(-(24 - Time[i] + sunrise[j + 1]))
+
+        df.insert(2, "time_relSR", dt)
+
+        ss = []
+        for j in range(len(sunset) - 2):
+            for i in range(ndata_day2):
+                if Time[i] < sunrise[j]:
+                    ss.append((24 - sunset[j] + Time[i]))
+                else:
+                    ss.append(Time[i] - sunset[j + 1])
+
+        df.insert(3, "time_relSS", ss)
+
+        n = 1
+        df.insert(4, "day", 0)
+        for i in df.index:
+            if df.at[i, "time_relSS"] == 0:
+                df.at[i, "day"] = n + 1
+                n = n + 1
+            else:
+                df.at[i, "day"] = n
+
+        print("Time relative to SR, SS, and day relative to SS done")
+
+=======
         ## COLUMNS 'time_relSR' : time relative to sunrise; 'time_relSS' : time relative to sunset; 'day' : from sunset to sunset
 
         Time = [i / 4.0 for i in range(1, ndata_day2 + 1)]
@@ -886,16 +1129,22 @@ def main(
                 df.at[i, "day"] = n
 
         print("Time relative to SR, SS, and day relative to SS done")
-
+>>>>>>> develop
 
         ## FLAG COLUMN
+
+<<<<<<< HEAD
+        df.insert(5, "FLAG_QC", 0)
+=======
+        ## FLAG COLUMN
+>>>>>>> develop
 
         df.insert(5, "FLAG_QC", 0)
 
 
 
 
-
+<<<<<<< HEAD
         ######## FILTERS #########
 
 
@@ -906,10 +1155,23 @@ def main(
         df = rain_filter(df)
         df[(df.index.day == 15)][60:90]["MLH"]
         print("filter Rain done")
+=======
 
+        ######## FILTERS #########
+
+
+        ## RAIN
+>>>>>>> develop
+
+        # df['MLH'] = np.where(df.prof > 0,np.nan,df.MLH) #useless because MLH already NaN where prof > 0 ; moreover, with 15min averaging, some existing MLH might become NaN and therefore 'invisible' for next filters (case for 19/12/20)
+        df[(df.index.day == 15)][60:90]["MLH"]
+        df = rain_filter(df)
+        df[(df.index.day == 15)][60:90]["MLH"]
+        print("filter Rain done")
 
         ##REMOVE STUCK MLH AT DAY/WARM SEASONS
 
+<<<<<<< HEAD
         if (site != "LERWICK,UK") & (warm == True):
             df = stuck_mlh(df)
         print("filter Stuck MLH done")
@@ -925,6 +1187,72 @@ def main(
         for i in idx:
             idx2 = df[df.index < i].MLH.last_valid_index()
             if idx2 is not None:
+                if (i - idx2) < timedelta(hours=9):
+                    df["diff"][i] = df.MLH[i] - df.MLH[idx2]
+
+        
+        df = massive_inc_night(df, 250, 1)  
+        df = massive_inc_night(df, 400, 4)  
+        df = massive_dec_night(df, -250, 1)     
+        df = massive_dec_night(df, -400, 4)
+        
+        print("filter Massive decrease/increase at night done")
+
+        ## CHECK FOR MASSIVE INCREASE/DECREASE AT DAY IN 2H MAX
+
+        # differences between consecutive mlh (taking NaN into account)
+        df["diff"] = df["MLH"].diff()
+=======
+        ##REMOVE STUCK MLH AT DAY/WARM SEASONS
+
+        if (site != "LERWICK,UK") & (warm == True):
+            df = stuck_mlh(df)
+        print("filter Stuck MLH done")
+
+
+        ## CHECK FOR MASSIVE INCREASE/DECREASE AT NIGHT IN 9H MAX
+
+        # differences between consecutive mlh (taking NaN into account)
+        df["diff"] = df["MLH"].diff()
+        d = (df.day == 2) | (df.day == 3)
+        df[d]["diff"] = df[d]["MLH"].diff()
+>>>>>>> develop
+        idx = df[np.isnan(df["diff"]) == True].index.to_list()
+        for i in idx:
+            idx2 = df[df.index < i].MLH.last_valid_index()
+            if idx2 is not None:
+<<<<<<< HEAD
+                if (i - idx2) <= timedelta(minutes=120):
+                    df["diff"][i] = df.MLH[i] - df.MLH[idx2]
+
+        if warm == False:
+            df = day_peaks(df, 1000, 180, 4)
+            df = day_peaks(df, 400, 120, 3)
+            df = cold_day_dec(df, -1500)
+        else:  
+            df = day_peaks(df, 500, 180, 4) # 1000m instead of 500m because was removing 06/02/22 in Granada 
+            df = day_peaks(df, 400, 120, 3)
+
+        if summer == True :
+            df = massive_inc_afternoon(df, 500, 2, 2) #2 or 4 ? might apply this in winter because of 13/02/22 Granada, 06/03/22,  
+        else :
+            df = massive_inc_afternoon(df, 500, 4, 4)
+        
+        print("filter Massive Increase/decrease at day done")
+
+       
+        df = dip_afternoon(df, 1000, 4)
+        
+    
+        ## EXTREME POINTS
+
+        if (month2 < 3) | (month2 > 11):
+            df = extreme(df,0.75,maxmlh)
+        else :
+            df = extreme(df,1,maxmlh)
+        print("filter Extreme points done")
+
+=======
                 if (i - idx2) < timedelta(hours=9):
                     df["diff"][i] = df.MLH[i] - df.MLH[idx2]
 
@@ -973,10 +1301,11 @@ def main(
         else :
             df = extreme(df,1,maxmlh)
         print("filter Extreme points done")
-
+>>>>>>> develop
 
         ## RESIDUAL LAYER
 
+<<<<<<< HEAD
       
 
         if warm == True:
@@ -1078,8 +1407,114 @@ def main(
 
         ## CLOSE FILES
     return 0
+=======
+        ## RESIDUAL LAYER
 
+      
+
+        if warm == True:
+            df = residual_layer(df,800,0.75,600)
+            df = rel_residual_layer(df, 1)
+        else:
+            df = residual_layer(df,600,0.5,500)
+            df = rel_residual_layer(df, 1.5)
+
+        print("filter Residual layer done")
+
+        ######## END FILTERS #########
+
+        ######## CHANGE FLAG_QC IN 1MIN FREQUENCE #########
+
+        df_day_2["FLAG_QC"] = 0
+        df = df[
+            (df.index.date == date.fromisoformat(day2))
+            | (df.index.time == time(0, 0, 0))
+        ]
+        df = df[: len(df) - 1]
+        a = df.index[len(df) - 1]
+        b = a - timedelta(milliseconds=1)
+        df.rename(index={a: b}, inplace=True)
+
+        for i in range(1, len(df)):
+            df_day_2.loc[
+                (
+                    (df_day_2.index.time <= df.index.time[i])
+                    & (df_day_2.index.time >= df.index.time[i - 1])
+                ),
+                "FLAG_QC",
+            ] = df.FLAG_QC[i]
+
+        ######## PREPARE L2A DATAFRAME TO BE FILLED WITH NEW FLAG_QC AND THEREFORE NEW MLH #########
+
+        df2 = clean_time_array(xr.open_dataset(day_2a)).to_dataframe()
+     
+        df2["FLAG_QC"] = list(df_day_2["FLAG_QC"].astype(int))
+        df2["FLAG_QC"] = df2["FLAG_QC"][np.isnan(df2["MLH"]) == False]
+        df2["MLH"] = df2[df2.FLAG_QC == 0]["MLH"]
+        df2["MLH"].fillna(-999, inplace=True)
+        df2["FLAG_QC"].fillna(-999, inplace=True)
+
+        MLH = df2["MLH"].to_xarray()
+        MLH.attrs["units"] = "m"
+        MLH.attrs["long_name"] = "mixed layer height"
+        MLH.attrs["comment"] = "After quality control ; above ground level"
+        ds["MLH"] = MLH.transpose("time", "station")
+        
+        ds = ds.rename({"FLAG": "precip_FLAG"})
+        ds.precip_FLAG.attrs["units"] = "range between 0 and 1"
+
+        FLAG_QC = df2["FLAG_QC"].astype(np.int32).to_xarray()
+        FLAG_QC.attrs["units"] = "1"
+        FLAG_QC.attrs["long_name"] = "flag for MLH after quality control"
+        ds["FLAG"] = FLAG_QC.transpose("time", "station")
+
+        ds.attrs["comment"] = "Mixed layer height after quality control; Git repository : git@gitlab.in2p3.fr:ipsl/sirta/mld/stratfinder/qc-sf-python.git"
+        
+        ## add history in output file 
+        dir_path = os.path.dirname(os.path.realpath(f"{sys.argv[0]}"))
+        repo = git.Repo(f"{dir_path}")
+        sha = repo.head.commit.hexsha
+        ds.attrs[
+            "history"
+        ] = f"Version of quality control code : {sha} ; date of creation : {date_today}"
+
+        print("MLH replaced, FLAG added, History added")
+
+        
+        ######## PREPARE L2A DATASET TO BE FILLED WITH NEW VARIABLES #########
+        
+        ds2 = xr.open_dataset(day_2a)
+        ds2_enco = get_encoding(ds2)
+        ds2_enco["time"] = {
+            "calendar": "standard",
+            "dtype": "double",
+            "_FillValue": None,
+        }  
+        
+        ds2_enco["MLH"] = {"dtype": ds2["MLH"].encoding["dtype"], "_FillValue": "-999"}
+        ds2_enco["FLAG"] = {"_FillValue": -999}
+        del ds2_enco["station"]
+
+        uid = pwd.getpwnam("eprofile").pw_uid
+        gid = grp.getgrnam("eprofile").gr_gid
+        ds = ds.sel(time=slice(day2, day2))
+        ds = Change_dims(ds)
+        ds2_enco["platform_id"] = ds["platform_id"].encoding
+        ds2_enco["station_name"] = ds["station_name"].encoding
+        ds.time.encoding["units"] = ds2["time"].encoding["units"] + "UTC"
+        ds.time.attrs["long_name"] = "time"
+        ds.to_netcdf(output_day2a, encoding=ds2_enco, mode="w", engine="netcdf4", unlimited_dims=["time","station_name"])
+
+        os.chmod(output_day2a, 0o644)
+        os.chown(output_day2a, uid, gid)
+        print(f"output file created : {output_day2a}")
+>>>>>>> develop
+
+        ## CLOSE FILES
+    return 0
 
 if __name__ == "__main__":
     sys.exit(main())
 
+if __name__ == "__main__":
+    sys.exit(main())
