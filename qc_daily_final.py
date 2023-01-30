@@ -1062,8 +1062,8 @@ def main(
         ds2_enco["FLAG"] = {"_FillValue": -999}
         del ds2_enco["station"]
 
-        #uid = pwd.getpwnam("eprofile").pw_uid
-        #gid = grp.getgrnam("eprofile").gr_gid
+        uid = pwd.getpwnam("eprofile").pw_uid
+        gid = grp.getgrnam("eprofile").gr_gid
         ds = ds.sel(time=slice(day2, day2))
         ds = Change_dims(ds)
         ds2_enco["platform_id"] = ds["platform_id"].encoding
@@ -1072,8 +1072,8 @@ def main(
         ds.time.attrs["long_name"] = "time"
         ds.to_netcdf(output_day2a, encoding=ds2_enco, mode="w", engine="netcdf4", unlimited_dims=["time","station_name"])
 
-        #os.chmod(output_day2a, 0o644)
-        #os.chown(output_day2a, uid, gid)
+        os.chmod(output_day2a, 0o644)
+        os.chown(output_day2a, uid, gid)
         print(f"output file created : {output_day2a}")
 
         ## CLOSE FILES
