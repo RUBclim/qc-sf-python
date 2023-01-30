@@ -170,7 +170,7 @@ def rain_filter(df: pd.DataFrame) -> pd.DataFrame:
 
 
 
-def cold_day_inc(df: pd.DataFrame, thresh) -> pd.DataFrame:
+def day_peaks(df: pd.DataFrame, thresh, time_range, mov_sum_step) -> pd.DataFrame:
     """remove massive increases during daytime in cold seasons
 
     Args:
@@ -181,38 +181,80 @@ def cold_day_inc(df: pd.DataFrame, thresh) -> pd.DataFrame:
         _type_: flaggued dataframe
     """
     d = df.day == 2
-    #mov_sum = df['diff'][d].rolling(4).sum()
-    mov_sum = df['diff'].rolling(4).sum()
-    print('cold_day_inc function')
-    cond_increase = mov_sum > thresh
-    cond_decrease = mov_sum < -thresh
-    #df2 = df[(df.time_relSR > 0) & (df["diff"] > thresh) & d]
+    mov_sum = df['diff'].rolling(mov_sum_step).sum()
+    print('day_peaks function with mov_sum_step = ', mov_sum_step)
+    cond_increase = (mov_sum > thresh) & (mov_sum < thresh*2)
+    cond_decrease = mov_sum < -thresh + 100
     df2 = df[(df.time_relSR > 0) & (cond_increase == True) & d]
 
-    #h = df["diff"] > thresh
-    #l = df["diff"] < -(thresh - 200)
     l = cond_decrease == True
     t = df["time_relSR"] > 0
     ind = []
 
     if df2.index.size != 0:
-        print('cold_day_inc activated')
-
+        print('day_peaks activated')
         for idx in df2.index:
-            if df[(df.index >= idx) & (df.MLH < 500) & d].index.min() is not pd.NaT:
-                print('increase during day but MLH comes back under 500m')
-                idx = idx - timedelta(minutes=60)
-                a = df[(df.index >= idx) & (df.MLH < 500) & d].index.min()
-                ind = ind + df[idx : a - timedelta(minutes=15)].index.to_list()
-
-            elif df[l & (df.index >= idx) & (df.index <= idx+timedelta(minutes=180)) & d].index.min() is not pd.NaT:
-                print('increase during day then decrease within 3h')
-                idx = idx - timedelta(minutes=60)
-                a = df[l & (df.index >= idx) & (df.index <= idx+timedelta(minutes=180)) & d].index.min()
-                ind = ind + df[idx : a - timedelta(minutes=15)].index.to_list()
+            if (df[l & (df.index >= idx) & (df.index <= idx+timedelta(minutes=time_range))].index.min() is not pd.NaT) : #& (df["MLH"][idx] < 2500):
+                print('increase during day then decrease within time_range defined')
+                a = df[l & (df.index >= idx) & (df.index <= idx+timedelta(minutes=time_range))].index.min()
+                ind = ind + df[idx : a + timedelta(minutes=15)].index.to_list()
 
     df.FLAG_QC[ind] = df.FLAG_QC[ind] + 100
+    print(ind)
+
     return df
+
+
+
+def cold_day_dec(df: pd.DataFrame, thresh) -> pd.DataFrame:
+    """remove massive increases during daytime in cold seasons
+
+    Args:
+        df (_type_): dataframe
+        thresh (_type_): threshold (in m) typical of a strong increase
+
+    Returns:
+        _type_: flaggued dataframe
+
+    Comments :
+        made for 17/03/22 at Lindenberg
+    """
+    d = df.day == 2
+    mov_sum = df['diff'].rolling(2).sum()
+    print('cold_day_dec function')
+    cond_decrease = mov_sum < thresh
+    df2 = df[(df.time_relSR > 0) & (df.time_relSS < -2) & (cond_decrease == True) & d]
+    t = df["time_relSR"] > 0
+    ind = []
+    if df2.index.size != 0:
+        print('cold_day_dec activated')
+        for idx in df2.index:
+            d = df.day == df2.day[idx]
+            #definition of the real_mlh = real mlh, ie before the increase 
+            if df["MLH"][idx] < 500 :
+                real_mlh = 500
+            else :
+                real_mlh = df["MLH"][idx]
+            
+            l = df["MLH"] <= real_mlh
+            print("real_mlh = ", real_mlh)
+
+            sr = df[df.time_relSR == 0].index.to_list()
+            idx_prec = idx - timedelta(minutes=60)
+            if df[t & d & l & (df.index < idx_prec)].index.max() is not pd.NaT:
+                print('removing from mlh is low enough to idx')
+                a = df[d & l & (df.index < idx_prec)].index.max()
+                a = a + timedelta(minutes=15)
+                ind += df[a:idx].index.to_list()
+            else:
+                print('removing from sr to idx')
+                ind += df[sr:idx].index.to_list()
+
+    df.FLAG_QC[ind] = df.FLAG_QC[ind] + 100
+    print(ind)
+
+    return df
+
 
 
 def cold_morn_inc(df: pd.DataFrame, thresh: int) -> pd.DataFrame:
@@ -253,6 +295,8 @@ def cold_morn_inc(df: pd.DataFrame, thresh: int) -> pd.DataFrame:
                 ind = ind + df[idx : a - timedelta(minutes=15)].index.to_list()
 
     df.FLAG_QC[ind] = df.FLAG_QC[ind] + 100
+    print(ind)
+
     return df
 
 
@@ -402,8 +446,10 @@ def warm_day_inc(df: pd.DataFrame, thresh: int) -> pd.DataFrame:
                 ind = ind + df[idx:a].index.to_list()
 
     df.FLAG_QC[ind] = df.FLAG_QC[ind] + 100
-    return df
+    print(ind)
 
+    return df
+    
 
 def residual_layer(df: pd.DataFrame, thresh1, thresh2, thresh3) -> pd.DataFrame:
     """Remove residual layer (night)
@@ -446,6 +492,7 @@ def rel_residual_layer(df: pd.DataFrame, frac_max) -> pd.DataFrame:
 
     Args:
         df (_type_): dataframe
+        frac_max (_type_) : fraction considered of the maximum of daytime (scalar between 0 and 1) 
        
     Returns:
         _type_: flaggued dataframe
@@ -477,8 +524,8 @@ def extreme(df: pd.DataFrame, frac_maxmlh, maxmlh) -> pd.DataFrame:
 
     Args:
         df (_type_): dataframe
-        frac_maxmlh : fraction of the maxmlh considered as the threshold 
-        maxmlh : maximum MLH in config file 
+        frac_maxmlh : fraction of the maxmlh considered as the threshold (scalar between 0 and 1)
+        maxmlh : maximum MLH set in config file (scalar)
 
     Returns:
         _type_: flaggued dataframe
@@ -496,7 +543,8 @@ def massive_dec_night(df: pd.DataFrame, thresh, time_thresh) -> pd.DataFrame:
 
     Args:
         df (_type_): dataframe
-        thresh (_type_): threshold (in m) typical of a strong decrease (absolute value)
+        thresh (_type_): threshold typical of a strong decrease (absolute value in m) (scalar)
+        time_thresh (_type_) : time range considered to identify a decrease (in time steps) (scalar)
 
     Returns:
         _type_: flaggued dataframe
@@ -505,9 +553,6 @@ def massive_dec_night(df: pd.DataFrame, thresh, time_thresh) -> pd.DataFrame:
     mov_sum = df['diff'][d].rolling(time_thresh).sum()
     cond_decrease = mov_sum < thresh
     df2 = df[(df.time_relSR <= 1) & d & (cond_decrease==True)]
-    print(df2)
-    #l = df["diff"] < thresh
-    #t = (df["time_relSR"] < 0.25) & (df["time_relSS"] > 2)
     t = df["time_relSS"] > 2
     ind = []
 
@@ -521,24 +566,23 @@ def massive_dec_night(df: pd.DataFrame, thresh, time_thresh) -> pd.DataFrame:
                 nl_mlh = df["MLH"][idx]
             
             l = df["MLH"] <= nl_mlh + 100
-            print("df['MLH'][idx] = ", nl_mlh)
+            print("nl_mlh = ", nl_mlh, " and  df['MLH'][idx] = ", df["MLH"][idx])
 
             ss = df.time_relSR[d].idxmin()
             idx_prec = idx - timedelta(minutes=60)
             if df[t & d & l & (df.index < idx_prec)].index.max() is not pd.NaT:
                 print('removing from mlh is low enough to idx')
-                #a = df[t & d & (df.MLH < 500) & (df.index < idx)].index.max()
                 a = df[d & l & (df.index < idx_prec)].index.max()
                 a = a + timedelta(minutes=15)
-                #idx = idx - timedelta(minutes=45)
                 ind += df[a:idx].index.to_list()
 
             else:
-                #idx = idx - timedelta(minutes=45)
                 print('removing from ss to idx')
                 ind += df[ss:idx].index.to_list()
 
     df["FLAG_QC"][ind] = df["FLAG_QC"][ind] + 100
+    print(ind)
+
     return df
 
 
@@ -550,17 +594,16 @@ def massive_inc_night(df: pd.DataFrame, thresh, time_thresh) -> pd.DataFrame:
     Args:
         df (pd.DataFrame): dataframe
         thresh (_type_): threshold (in m) typical of a strong increase
+        time_thresh (_type_) : time range considered to identify a decrease (in time steps) (scalar)
 
     Returns:
         pd.DataFrame: flaggued dataframe
     """
     d = (df.day == 2) | (df.day == 3)
-    print("start massive_inc_night")
+    print("start massive_inc_night with thresh = ", thresh)
     mov_sum = df['diff'][d].rolling(time_thresh).sum()
-    print(mov_sum[(mov_sum.index.day == 12)][0:60])
     cond_increase = mov_sum > thresh
     df2 = df[(df.time_relSR <= 1) & d & (cond_increase==True)]
-    print(df2)
     t = df["time_relSR"] < 4
     ind = []
 
@@ -572,7 +615,7 @@ def massive_inc_night(df: pd.DataFrame, thresh, time_thresh) -> pd.DataFrame:
             if nl_mlh < 300 :
                 nl_mlh = 300
             l = df["MLH"] <= nl_mlh
-            print("nl_mlh = ", nl_mlh)#, " and idx_prec = ", idx_prec)
+            print("nl_mlh = ", nl_mlh, " and  df['MLH'][idx] = ", df["MLH"][idx])
 
             idx_last = df[(df.time_relSR == 4) & d].index.to_list()
 
@@ -584,90 +627,130 @@ def massive_inc_night(df: pd.DataFrame, thresh, time_thresh) -> pd.DataFrame:
                 #a = a - timedelta(minutes=15)
                 ind += df[idx:a].index.to_list()
 
-            #elif (
-            #    df[t & d & (df.MLH < 500) & (df.index > idx)].index.min()
-            #    is not pd.NaT
-            #):  # MLH lower than 500m after increase
-            #    a = df[t & d & (df.MLH < 500) & (df.index > idx)].index.min()
-            #    a = a - timedelta(minutes=15)
-            #    ind += df[idx:a].index.to_list()
-
-            #elif df["time_relSR"][idx] > -1:  # increase in night end/ early morning
-            #    print("increase in night end")
-            #    ind += df[
-            #        d & (df["time_relSR"] < 4) & (df.index >= idx)
-            #    ].index.to_list()
-
             else:  # all layer is overestimated
                 ind = ind + df[idx : idx_last[0]].index.to_list()
 
     df["FLAG_QC"][ind] = df["FLAG_QC"][ind] + 100
+    print(ind)
+
     return df
 
 
 
 
-def dip_afternoon(df, thresh):
+def dip_afternoon(df, thresh, time_thresh):
+    """remove following layer after a massive increase at night
+
+    Args:
+        df (pd.DataFrame): dataframe
+        thresh (_type_): threshold (in m) typical of a increase/decrease
+        time_thresh (_type_) : time range considered to identify an increase/decrease (in time steps) (scalar)
+
+    Returns:
+        pd.DataFrame: flaggued dataframe
+    """
     d = df.day == 2
-    mov_sum = df['diff'][d].rolling(4).sum()
+    mov_sum = df['diff'][d].rolling(time_thresh).sum()
     cond_increase = mov_sum > thresh*.5
     cond_decrease = mov_sum < -thresh
     df2 = df[(df.time_relSR > 4) & (cond_decrease==True) & d]
-    print(df2)
-    print(df2.time_relSS)
     t = df["time_relSR"] > 0
 
     ind = []
     if df2.index.size != 0:
         print('dip afternoon activated')
         for idx in df2.index:
-            print(mov_sum[idx])
             if (
                 df[d & t & ((cond_increase)==True) & (df.index > idx)].index.max() is not pd.NaT   # decrease followed by increase
             ):  
                 a = df[d & t & (cond_increase)==True & (df.index > idx)].index.max()
-                ind += df[idx:a].index.to_list()
+                ind += df[idx:a + timedelta(minutes=15)].index.to_list()
                 print('decrease followed by increase')
-                
-            #elif (
-            #    df.loc[idx, 'time_relSS'] <= -3
-            #) & (
-            #    idx.hour <= 16
-            #) & (
-            #    mov_sum[idx] < -thresh*1.5
-            #) & (
-            #    df[
-            #        (df.index <= idx) 
-            #        & (df.index >= idx - timedelta(minutes=300)) 
-            #    ].index.min() is not pd.NaT                            # strong decrease in the middle of the day not followed by increase
+    
+    mov_sum = df['diff'][d].rolling(1).sum()
+    test = mov_sum[(mov_sum.shift(-1) > 0) & (mov_sum.shift(0) < 0)]    
+    #test2 = mov_sum[(mov_sum.shift(0) > 0) & (mov_sum.shift(-1) < 0)]
+    #test = pd.concat([test1, test2])
+    print(test)
+    test_index = test[(df.time_relSR > 4) & d].index.to_list()
+    print(mov_sum[test_index])
+    print(mov_sum[(df.time_relSR > 4) & d])
 
-            #) :
-            #    print('decrease not followed by increase')
-            #    a = df[
-            #        (df.index <= idx) 
-            #        & (df.index >= idx - timedelta(minutes=300)) 
-            #    ].index.min()
-            #    idx = idx + timedelta(minutes=120)
-            #    ind += df[a:idx].index.to_list()
 
+    for idx in test_index :
+
+        print(idx)
+        print(~mov_sum[(mov_sum.index > idx) & (mov_sum.index < idx+timedelta(minutes=120)) & (mov_sum.values < -100)].any())
+        print(~mov_sum[(mov_sum.index < idx) & (mov_sum.index > idx-timedelta(minutes=120)) & (mov_sum.values > 100)].any())
+        print((mov_sum[(mov_sum.index > idx) & (mov_sum.index < idx+timedelta(minutes=120))].sum() > thresh*.5))
+        print((mov_sum[(mov_sum.index <= idx) & (mov_sum.index > idx-timedelta(minutes=120))].sum() < -thresh*.5))
+        
+
+        if (
+            ~mov_sum[(mov_sum.index > idx) & (mov_sum.index < idx+timedelta(minutes=120)) & (mov_sum.values < -100)].any() & 
+            ~mov_sum[(mov_sum.index < idx) & (mov_sum.index > idx-timedelta(minutes=120)) & (mov_sum.values > 100)].any() &
+            (mov_sum[(mov_sum.index > idx) & (mov_sum.index < idx+timedelta(minutes=120))].sum() > thresh*.5) &
+            (mov_sum[(mov_sum.index <= idx) & (mov_sum.index > idx-timedelta(minutes=120))].sum() < -thresh*.5)
+        ) :
+            ind += df[idx-timedelta(minutes=180):idx+timedelta(minutes=180)].index.to_list()
+            print('local minimum detected')
+            print(ind)
+
+    
     df.FLAG_QC[ind] = df.FLAG_QC[ind] + 100
+    print(ind)
     return df
 
 
-def massive_inc_afternoon(df, thresh):
+def massive_inc_afternoon(df, thresh, time_thresh, time_bef_ss):
+    """remove following layer after a massive increase at night
+
+    Args:
+        df (pd.DataFrame): dataframe
+        thresh (_type_): threshold (in m) typical of a strong increase
+        time_thresh (_type_) : time relative to sunset from which to consider increase (in hour) (scalar) 
+
+    Returns:
+        pd.DataFrame: flaggued dataframe
+    """
     d = df.day == 2
-    mov_sum = df['diff'][d].rolling(4).sum()
+    mov_sum = df['diff'].rolling(time_thresh).sum()
+    print(mov_sum[(mov_sum.index.day == 19) & (mov_sum.index.hour >=14) & (mov_sum.index.hour <= 20)])
     cond_increase = mov_sum > thresh
-    t = (df.time_relSS > -4) & ((df.time_relSR >= 0))
+    cond_decrease = mov_sum < -thresh
+    cond_stag = mov_sum < 200
+    t = (df.time_relSS > -time_bef_ss) & ((df.time_relSR >= 0))
     df2 = df[t & (cond_increase==True) & d]
     ind = []
     if df2.index.size != 0:
         print('massive increase in end of afternoon activated')
-        idx = df2.index[0]
-        a = df[(df.time_relSS == 0.5) & (df.index > idx)].index.min()
-        ind += df[idx:a].index.to_list()
+        for idx in df2.index:
+            if (
+                (df[(df.index <= idx) & (df.index >= idx - timedelta(minutes=180)) & (cond_stag == False)].any() == False)
+                & (df[(df.index <= idx) & (df.index >= idx - timedelta(minutes=180)) & (cond_stag == False)].index.max() is not pd.NaT)         
+            ) :
+                print('strong increase preceded by stagnation or decrease')
+                a = df[(df.index <= idx) & (df.index >= idx - timedelta(minutes=300)) & (cond_decrease == True)].index.max()
+                a = a - timedelta(minutes=60)
+                ind += df[a:idx].index.to_list()
+
+
+            elif df[(df.index >= idx) & (cond_decrease == True) & d].index.min() is not pd.NaT :
+                print('strong increase followed by decrease')
+                a = df[(df.index >= idx) & (cond_decrease == True) & d].index.min()
+                a = a + timedelta(minutes=60)
+                ind += df[idx:a].index.to_list()
+
+
+            elif df[(time_bef_ss == 2) & (df.time_relSS == 0.5) & (df.index > idx)].index.min() is not pd.NaT :
+                print('strong increase at the very end of the day, only considered in summer')
+                idx = df2.index[0]
+                a = df[(df.time_relSS == 0.5) & (df.index > idx)].index.min()
+                ind += df[idx:a].index.to_list()
 
     df.FLAG_QC[ind] = df.FLAG_QC[ind] + 100
+    print(ind)
+
     return df
 
 
@@ -811,6 +894,7 @@ def main(
         site = ds.attrs["site_location"]  ## site name given in L2A by E-PROFILE
         month2 = ds["time"].dt.month[0].values
         warm = (month2 > 3) & (month2 < 10)
+        summer = (month2 > 5) & (month2 < 9)
         lat = ds["station_latitude"][0].values
         lon = ds["station_longitude"][0].values
         print(ds)
@@ -941,7 +1025,9 @@ def main(
         ## RAIN
 
         # df['MLH'] = np.where(df.prof > 0,np.nan,df.MLH) #useless because MLH already NaN where prof > 0 ; moreover, with 15min averaging, some existing MLH might become NaN and therefore 'invisible' for next filters (case for 19/12/20)
+        df[(df.index.day == 15)][60:90]["MLH"]
         df = rain_filter(df)
+        df[(df.index.day == 15)][60:90]["MLH"]
         print("filter Rain done")
 
 
@@ -955,35 +1041,23 @@ def main(
         ## CHECK FOR MASSIVE INCREASE/DECREASE AT NIGHT IN 9H MAX
 
         # differences between consecutive mlh (taking NaN into account)
+        #print("start counting difference for night time")
         df["diff"] = df["MLH"].diff()
         d = (df.day == 2) | (df.day == 3)
         df[d]["diff"] = df[d]["MLH"].diff()
-
         idx = df[np.isnan(df["diff"]) == True].index.to_list()
-
         for i in idx:
             idx2 = df[df.index < i].MLH.last_valid_index()
             if idx2 is not None:
                 if (i - idx2) < timedelta(hours=9):
                     df["diff"][i] = df.MLH[i] - df.MLH[idx2]
 
-        #test = (df.time_relSS >= 4) & (df.time_relSS < 8) & (df.day == 2)
-        test = ((df.index.hour == 4) | (df.index.hour == 5)) & (df.day == 2)
-
-        print(df[test].MLH)
-        print(df[test].FLAG_QC)
+        
         df = massive_inc_night(df, 250, 1)  
-        print(df[test].MLH)
-        print(df[test].FLAG_QC)
         df = massive_inc_night(df, 400, 4)  
-        print(df[test].MLH)
-        print(df[test].FLAG_QC)
         df = massive_dec_night(df, -250, 1)     
-        print(df[test].MLH)
-        print(df[test].FLAG_QC)
         df = massive_dec_night(df, -400, 4)
-        print(df[test].MLH)
-        print(df[test].FLAG_QC)
+        
         print("filter Massive decrease/increase at night done")
 
         ## CHECK FOR MASSIVE INCREASE/DECREASE AT DAY IN 2H MAX
@@ -999,17 +1073,28 @@ def main(
 
         if warm == False:
             df = cold_morn_inc(df, 400)
-            df = cold_day_inc(df, 700)
+            df = day_peaks(df, 1000, 180, 4)
+            df = day_peaks(df, 400, 120, 3)
+            df = cold_day_dec(df, -1500)
         else:  
             df = warm_day_inc(df, 1000)
-            df = massive_inc_afternoon(df, 500)
+            df = day_peaks(df, 500, 180, 4) # 1000m instead of 500m because was removing 06/02/22 in Granada 
+            df = day_peaks(df, 400, 120, 3)
+
+        if summer == True :
+            df = massive_inc_afternoon(df, 500, 2, 2) #2 or 4 ? might apply this in winter because of 13/02/22 Granada, 06/03/22,  
+        else :
+            print('summer is false')
+            df = massive_inc_afternoon(df, 500, 4, 4)
+            #df = massive_inc_afternoon(df, 600, 8, 4)   #19/02/22 Granada
+        
         print("filter Massive Increase/decrease at day done")
 
        
-        df = dip_afternoon(df, 1000)
-        print(df[test].MLH)
-        print(df[test].FLAG_QC)
+        df = dip_afternoon(df, 1000, 4)
+        #df = dip_afternoon(df, 500, 2)
 
+        
     
         ## EXTREME POINTS
 
@@ -1022,7 +1107,6 @@ def main(
 
         ## RESIDUAL LAYER
 
-        test = (df.time_relSS >= 0) & (df.time_relSS < 6) & (df.day == 3)
       
 
         if warm == True:
@@ -1034,8 +1118,6 @@ def main(
 
         print("filter Residual layer done")
 
-        print(df[test].MLH)
-        print(df[test].FLAG_QC)
         ######## END FILTERS #########
 
 
