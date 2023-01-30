@@ -163,3 +163,4 @@ cython_debug/
 .vscode/
 *.out
 test*
+run_qc_*

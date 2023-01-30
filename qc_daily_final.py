@@ -257,51 +257,6 @@ def cold_day_dec(df: pd.DataFrame, thresh) -> pd.DataFrame:
 
 
 
-def cold_morn_inc(df: pd.DataFrame, thresh: int) -> pd.DataFrame:
-    """remove massive increases in thz morning in cold seasons
-
-    Args:
-        df (_type_): dataframe
-        thresh (_type_): threshold (in m) typical of a strong increase
-
-    Returns:
-        _type_: flaggued dataframe
-    """
-    d = df.day == 2
-    df2 = df[(df.time_relSR > 0) & (df.index.hour < 12) & (df["diff"] > thresh) & d]
-    h = df["diff"] > thresh
-    l = df["diff"] < -thresh
-    t = df["time_relSR"] > 0
-
-    ind = []
-    if df2.index.size != 0:
-        print('cold_morn_inc activated')
-        for idx in df2.index:
-            if (
-                df[
-                    l
-                    & d
-                    & (df.index >= idx)
-                    & (df.index < idx + timedelta(minutes=210))
-                ].index.max()
-                is not pd.NaT
-            ):
-                a = df[
-                    l
-                    & d
-                    & (df.index >= idx)
-                    & (df.index < idx + timedelta(minutes=210))
-                ].index.max()
-                ind = ind + df[idx : a - timedelta(minutes=15)].index.to_list()
-
-    df.FLAG_QC[ind] = df.FLAG_QC[ind] + 100
-    print(ind)
-
-    return df
-
-
-
-
 def stuck_mlh(df: pd.DataFrame) -> pd.DataFrame:
     """remove stuck low MLH during daytime in warm seasons
 
@@ -402,54 +357,6 @@ def create_df3day(day_1a: Path, day_2a: Path, day_3a: Path) -> pd.DataFrame:
 
 
 
-
-
-def warm_day_inc(df: pd.DataFrame, thresh: int) -> pd.DataFrame:
-    """remove massive increases during daytime in warm seasons
-
-    Args:
-        df (_type_): dataframe
-        thresh (_type_): threshold (in m) typical of a strong increase
-
-    Returns:
-        _type_: flaggued dataframe
-    """
-    d = df.day == 2
-    df2 = df[(df.time_relSR > 0) & (df["diff"] > thresh) & d]  
-    h = df["diff"] > thresh
-    t = df["time_relSR"] > 0
-    l = df["diff"] < -(thresh - 100)
-    ind = []
-
-    if df2.index.size != 0:
-        print('warm_day_inc activated')
-
-        for idx in df2.index:
-            if (
-                df[
-                    t
-                    & d
-                    & l
-                    & (df.index >= idx)
-                    & (df.index <= idx + timedelta(minutes=60))
-                ].index.min()
-                is not pd.NaT
-            ):
-                a = df[
-                    t
-                    & d
-                    & l
-                    & (df.index >= idx)
-                    & (df.index <= idx + timedelta(minutes=60))
-                ].index.min()
-                a = a - timedelta(minutes=15)
-                ind = ind + df[idx:a].index.to_list()
-
-    df.FLAG_QC[ind] = df.FLAG_QC[ind] + 100
-    print(ind)
-
-    return df
-    
 
 def residual_layer(df: pd.DataFrame, thresh1, thresh2, thresh3) -> pd.DataFrame:
     """Remove residual layer (night)
@@ -669,23 +576,9 @@ def dip_afternoon(df, thresh, time_thresh):
     
     mov_sum = df['diff'][d].rolling(1).sum()
     test = mov_sum[(mov_sum.shift(-1) > 0) & (mov_sum.shift(0) < 0)]    
-    #test2 = mov_sum[(mov_sum.shift(0) > 0) & (mov_sum.shift(-1) < 0)]
-    #test = pd.concat([test1, test2])
-    print(test)
     test_index = test[(df.time_relSR > 4) & d].index.to_list()
-    print(mov_sum[test_index])
-    print(mov_sum[(df.time_relSR > 4) & d])
-
 
     for idx in test_index :
-
-        print(idx)
-        print(~mov_sum[(mov_sum.index > idx) & (mov_sum.index < idx+timedelta(minutes=120)) & (mov_sum.values < -100)].any())
-        print(~mov_sum[(mov_sum.index < idx) & (mov_sum.index > idx-timedelta(minutes=120)) & (mov_sum.values > 100)].any())
-        print((mov_sum[(mov_sum.index > idx) & (mov_sum.index < idx+timedelta(minutes=120))].sum() > thresh*.5))
-        print((mov_sum[(mov_sum.index <= idx) & (mov_sum.index > idx-timedelta(minutes=120))].sum() < -thresh*.5))
-        
-
         if (
             ~mov_sum[(mov_sum.index > idx) & (mov_sum.index < idx+timedelta(minutes=120)) & (mov_sum.values < -100)].any() & 
             ~mov_sum[(mov_sum.index < idx) & (mov_sum.index > idx-timedelta(minutes=120)) & (mov_sum.values > 100)].any() &
@@ -694,8 +587,6 @@ def dip_afternoon(df, thresh, time_thresh):
         ) :
             ind += df[idx-timedelta(minutes=180):idx+timedelta(minutes=180)].index.to_list()
             print('local minimum detected')
-            print(ind)
-
     
     df.FLAG_QC[ind] = df.FLAG_QC[ind] + 100
     print(ind)
@@ -715,7 +606,6 @@ def massive_inc_afternoon(df, thresh, time_thresh, time_bef_ss):
     """
     d = df.day == 2
     mov_sum = df['diff'].rolling(time_thresh).sum()
-    print(mov_sum[(mov_sum.index.day == 19) & (mov_sum.index.hour >=14) & (mov_sum.index.hour <= 20)])
     cond_increase = mov_sum > thresh
     cond_decrease = mov_sum < -thresh
     cond_stag = mov_sum < 200
@@ -897,24 +787,11 @@ def main(
         summer = (month2 > 5) & (month2 < 9)
         lat = ds["station_latitude"][0].values
         lon = ds["station_longitude"][0].values
-        print(ds)
         ds = clean_time_array(ds)
-        #print("ds after cleaning : ", ds)
-
         df_day_2 = ds.to_dataframe()
-        #print("len df_day_2 when created = ", len(df_day_2))
-
         df_day_2 = df_day_2.reset_index(level=0, drop=True)
-        #print(len(df_day_2))
-        #print(df_day_2[((df_day_2.index.hour == 14) | (df_day_2.index.hour == 13)) & (df_day_2.index.minute < 10)])
-
-        #print(df_day_2[df_day_2.index.duplicated(keep="first")])
         df_day_2 = df_day_2[~df_day_2.index.duplicated(keep="first")]
-        #print(len(df_day_2))
-
         df_day_2 = df_day_2.loc[df_day_2.index.dropna()]
-        #print("len df_day_2 after cleaning = ", len(df_day_2))
-
 
         day_today = conv_np64dt_to_dt(ds["time"][0].values)
         day0 = day_today - timedelta(days=2) 
@@ -1041,7 +918,6 @@ def main(
         ## CHECK FOR MASSIVE INCREASE/DECREASE AT NIGHT IN 9H MAX
 
         # differences between consecutive mlh (taking NaN into account)
-        #print("start counting difference for night time")
         df["diff"] = df["MLH"].diff()
         d = (df.day == 2) | (df.day == 3)
         df[d]["diff"] = df[d]["MLH"].diff()
@@ -1072,28 +948,22 @@ def main(
                     df["diff"][i] = df.MLH[i] - df.MLH[idx2]
 
         if warm == False:
-            df = cold_morn_inc(df, 400)
             df = day_peaks(df, 1000, 180, 4)
             df = day_peaks(df, 400, 120, 3)
             df = cold_day_dec(df, -1500)
         else:  
-            df = warm_day_inc(df, 1000)
             df = day_peaks(df, 500, 180, 4) # 1000m instead of 500m because was removing 06/02/22 in Granada 
             df = day_peaks(df, 400, 120, 3)
 
         if summer == True :
             df = massive_inc_afternoon(df, 500, 2, 2) #2 or 4 ? might apply this in winter because of 13/02/22 Granada, 06/03/22,  
         else :
-            print('summer is false')
             df = massive_inc_afternoon(df, 500, 4, 4)
-            #df = massive_inc_afternoon(df, 600, 8, 4)   #19/02/22 Granada
         
         print("filter Massive Increase/decrease at day done")
 
        
         df = dip_afternoon(df, 1000, 4)
-        #df = dip_afternoon(df, 500, 2)
-
         
     
         ## EXTREME POINTS
@@ -1120,10 +990,6 @@ def main(
 
         ######## END FILTERS #########
 
-
-        print("len df_day_2 before remerging = ", len(df_day_2))
-
-
         ######## CHANGE FLAG_QC IN 1MIN FREQUENCE #########
 
         df_day_2["FLAG_QC"] = 0
@@ -1148,8 +1014,6 @@ def main(
         ######## PREPARE L2A DATAFRAME TO BE FILLED WITH NEW FLAG_QC AND THEREFORE NEW MLH #########
 
         df2 = clean_time_array(xr.open_dataset(day_2a)).to_dataframe()
-
-        print("len df = ", len(df), ", len df_day_2 = ", len(df_day_2), ", len(df2) = ", len(df2))
      
         df2["FLAG_QC"] = list(df_day_2["FLAG_QC"].astype(int))
         df2["FLAG_QC"] = df2["FLAG_QC"][np.isnan(df2["MLH"]) == False]
@@ -1171,7 +1035,7 @@ def main(
         FLAG_QC.attrs["long_name"] = "flag for MLH after quality control"
         ds["FLAG"] = FLAG_QC.transpose("time", "station")
 
-        ds.attrs["comment"] = "Mixed layer height after quality control; Git repository : git@gitlab.in2p3.fr:mvanhove/qc-sf-python.git"
+        ds.attrs["comment"] = "Mixed layer height after quality control; Git repository : git@gitlab.in2p3.fr:ipsl/sirta/mld/stratfinder/qc-sf-python.git"
         
         ## add history in output file 
         dir_path = os.path.dirname(os.path.realpath(f"{sys.argv[0]}"))
