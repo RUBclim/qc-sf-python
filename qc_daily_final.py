@@ -617,8 +617,7 @@ def massive_inc_afternoon(df, thresh, time_thresh, time_bef_ss):
     if df2.index.size != 0:
         print('massive increase in end of afternoon activated')
         for idx in df2.index:
-            if (
-                (df[(df.index <= idx) & (df.index >= idx - timedelta(minutes=180)) & (cond_stag == False)].any() == False)
+            if ( ~mov_sum[(mov_sum.index <= idx) & (mov_sum.index >= idx - timedelta(minutes=180)) & (cond_stag == False)].any()
                 & (df[(df.index <= idx) & (df.index >= idx - timedelta(minutes=180)) & (cond_stag == False)].index.max() is not pd.NaT)         
             ) :
                 print('strong increase preceded by stagnation or decrease')
