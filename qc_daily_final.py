@@ -1043,8 +1043,9 @@ def main(
         dir_path = os.path.dirname(os.path.realpath(f"{sys.argv[0]}"))
         repo = git.Repo(f"{dir_path}")
         sha = repo.head.commit.hexsha
+        sha = sha[0:6]
         ds.attrs[
-            "history"
+            "history_qc"
         ] = f"Version of quality control code : {sha} ; date of creation : {date_today}"
 
         print("MLH replaced, FLAG added, History added")
