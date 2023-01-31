@@ -18,6 +18,7 @@ Massive increases/decreases at nights differentiate residual and nocturnal layer
 
 The residual layers are identified by comparing the values with the maximum daytime MLH, or by comparing the MLH with empirical values  
 
+The stuck_mlh filter is not applied in Lerwick because of the climatological conditions of this site : oceanic and cold, so the MLH is often considered as 'stuck' by the filter. => might add a criteria in the config file for every site to avoid writing the complete name in the code 
 
 
 ## SCRIPT : run_plot_sites_jason.sh
