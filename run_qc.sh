@@ -44,7 +44,7 @@ iter=1
 #do
 #for file in /homedata/mvanhove/CL61_urbisphere/CL61_Berlin/new_data/raw2l1_set\(de.berlin.BETEMP\,ALC_T*\,20220729T000000_20220730T000000\)_version\(v1.0.1_L2A_120m_v2022a.nc
 #do
-for file in /homedata/mvanhove/L2A/lindenberg/eprofile_L2A_STRATFINDER_lindenberg_chm15k-0_v01_20220[2-9]*.nc
+for file in /homedata/mvanhove/L2A/lindenberg/eprofile_L2A_STRATFINDER_lindenberg_chm15k-0_v01_20220201.nc
 do
 #for file in /homedata/mvanhove/CL61/HDV/stratfinder_v2022c/cl61_1a_LHdVPpr2R5mF30s_v01_20220*_000000_L2A_180m_v2022c_2weights_os.nc
 #do
