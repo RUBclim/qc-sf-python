@@ -97,10 +97,6 @@ def clean_time_array(ds: xr.Dataset) -> xr.Dataset:
     x = ~np.isnan(ds["time"])
     new_time = {"time": x}
     ds = ds.isel(new_time)
-
-    #_, index = np.unique(ds["time"], return_index=True)
-    #ds = ds.isel(time=index)
-    #ds = ds.sortby("time")
     ds["time"] = ds["time"].dt.floor("min")
     _, index = np.unique(ds["time"], return_index=True)
     ds = ds.isel(time=index)
@@ -109,7 +105,7 @@ def clean_time_array(ds: xr.Dataset) -> xr.Dataset:
 
 
 def Get_coverage(ds: xr.Dataset, var: str):
-    """Get the min and maximum coverage for some variable such as time,latitude 
+    """Get the min and maximum coverage for some variable such as time, latitude 
     or longitude 
 
     Args:
@@ -171,11 +167,18 @@ def rain_filter(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def day_peaks(df: pd.DataFrame, thresh, time_range, mov_sum_step, when) -> pd.DataFrame:
-    """remove massive increases during daytime in cold seasons
+    """remove sharp increases followed by decreases during daytime or end of afternoon 
+        which are often local overestimations ; if the increase is higher than 2*thresh, 
+        it is considered as a real growth 
 
     Args:
         df (_type_): dataframe
         thresh (_type_): threshold (in m) typical of a strong increase
+        time_range : time range considered to detect a decrease (in time step)
+        mov_sum_step : time considered to define an increase (in time step)
+        when : day time or end of afternoon; end of afternoon being selected for summer 
+            and massive peaks, to avoid removing peaks occuring during heat waves
+            in the middle of the afternon (ex : 19/07/22 at Palaiseau, France)
 
     Returns:
         _type_: flaggued dataframe
@@ -209,17 +212,18 @@ def day_peaks(df: pd.DataFrame, thresh, time_range, mov_sum_step, when) -> pd.Da
 
 
 def cold_day_dec(df: pd.DataFrame, thresh) -> pd.DataFrame:
-    """remove massive increases during daytime in cold seasons
+    """remove massive increases during daytime in cold seasons, detected by sharp
+    and massive decreases 
 
     Args:
         df (_type_): dataframe
-        thresh (_type_): threshold (in m) typical of a strong increase
+        thresh (_type_): threshold (in m) typical of a strong decrease
 
     Returns:
         _type_: flaggued dataframe
 
     Comments :
-        made for 17/03/22 at Lindenberg
+        based on 17/03/22 at Lindenberg
     """
     d = df.day == 2
     mov_sum = df['diff'].rolling(2).sum()
@@ -232,7 +236,7 @@ def cold_day_dec(df: pd.DataFrame, thresh) -> pd.DataFrame:
         print('cold_day_dec activated')
         for idx in df2.index:
             d = df.day == df2.day[idx]
-            #definition of the real_mlh = real mlh, ie before the increase 
+            #definition of the real_mlh = real mlh, ie after the decrease 
             if df["MLH"][idx] < 500 :
                 real_mlh = 500
             else :
@@ -260,14 +264,25 @@ def cold_day_dec(df: pd.DataFrame, thresh) -> pd.DataFrame:
 
 
 def stuck_mlh(df: pd.DataFrame) -> pd.DataFrame:
-    """remove stuck low MLH during daytime in warm seasons
+    """remove stuck low MLH during daytime in warm seasons; 
+        conditions to remove the day : 
+        if more than 50% of MLH is lower than 300m during daytime 
+        or
+        if the maximum MLH in the morning is higher than 300m but 
+        more than 50% of the afternoon MLH is lower than 500m  
 
     Args:
         df (_type_): dataframe
 
     Returns:
         _type_: flaggued dataframe
+    
+    Comments :
+        occurs if morning growth is not detected by STRATFinder 
+        (not strong enough gradient) or if overlap model not good
+        enough 
     """
+
     d = df.day == 2
     daytime = (df.time_relSR > 5) & d
     n_inf_300 = (daytime & (df.MLH < 300)).sum()
@@ -295,7 +310,8 @@ def stuck_mlh(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def create_df3day(day_1a: Path, day_2a: Path, day_3a: Path) -> pd.DataFrame:
-    """create a merged dataframe of the J-1,J and J+1 file 3 cases can happen 
+    """create a merged dataframe of the J-1,J and J+1 file ;
+        if J-1 or J+1 doesnt exist, it is replaced by en empty df 
 
 
     Args:
@@ -361,7 +377,7 @@ def create_df3day(day_1a: Path, day_2a: Path, day_3a: Path) -> pd.DataFrame:
 
 
 def residual_layer(df: pd.DataFrame, thresh1, thresh2, thresh3) -> pd.DataFrame:
-    """Remove residual layer (night)
+    """Remove residual layer (night) with absolute values
 
     Args:
         df (_type_): dataframe
@@ -397,7 +413,10 @@ def residual_layer(df: pd.DataFrame, thresh1, thresh2, thresh3) -> pd.DataFrame:
 
 
 def rel_residual_layer(df: pd.DataFrame, frac_max) -> pd.DataFrame:
-    """Remove residual layer (night)
+    """Remove residual layer (night) with relative values
+        in winter, a higher nocturnal layer is allowed relatively to daytime
+        in other seasons, the maximum MLH at daytime is considered the maximum 
+            allowed for night time 
 
     Args:
         df (_type_): dataframe
@@ -449,6 +468,8 @@ def extreme(df: pd.DataFrame, frac_maxmlh, maxmlh) -> pd.DataFrame:
 
 def massive_dec_night(df: pd.DataFrame, thresh, time_thresh) -> pd.DataFrame:
     """remove preceding layer after a massive decrease at night
+        the preceding layer is considered as a residual layer 
+        while the lower one is considered as the real noctural layer
 
     Args:
         df (_type_): dataframe
@@ -499,6 +520,8 @@ def massive_dec_night(df: pd.DataFrame, thresh, time_thresh) -> pd.DataFrame:
 
 def massive_inc_night(df: pd.DataFrame, thresh, time_thresh) -> pd.DataFrame:
     """remove following layer after a massive increase at night
+        the following layer is considered as a residual layer 
+        while the lower one is considered as the real noctural layer
 
     Args:
         df (pd.DataFrame): dataframe
@@ -548,7 +571,11 @@ def massive_inc_night(df: pd.DataFrame, thresh, time_thresh) -> pd.DataFrame:
 
 
 def dip_afternoon(df, thresh, time_thresh):
-    """remove following layer after a massive increase at night
+    """remove dips occuring in the middle of the afternoon
+        the decrease is defined by the threshold while the following increase is 
+        defined by half of the threshold in case it occurs during the evening transition 
+        two ways to detect them : - massive increase followed by massive decrease 
+                                  - local minimum detected 
 
     Args:
         df (pd.DataFrame): dataframe
@@ -570,7 +597,7 @@ def dip_afternoon(df, thresh, time_thresh):
         print('dip afternoon activated')
         for idx in df2.index:
             if (
-                df[d & t & ((cond_increase)==True) & (df.index > idx)].index.max() is not pd.NaT   # decrease followed by increase
+                df[d & t & ((cond_increase)==True) & (df.index > idx)].index.max() is not pd.NaT
             ):  
                 a = df[d & t & (cond_increase)==True & (df.index > idx)].index.max()
                 ind += df[idx:a + timedelta(minutes=15)].index.to_list()
@@ -596,7 +623,8 @@ def dip_afternoon(df, thresh, time_thresh):
 
 
 def massive_inc_afternoon(df, thresh, time_thresh, time_bef_ss):
-    """remove following layer after a massive increase at night
+    """remove a sharp increase in the end of afternoon to avoid overestimation
+        less strict during summer in case of heat waves 
 
     Args:
         df (pd.DataFrame): dataframe
@@ -903,9 +931,7 @@ def main(
         ## RAIN
 
         # df['MLH'] = np.where(df.prof > 0,np.nan,df.MLH) #useless because MLH already NaN where prof > 0 ; moreover, with 15min averaging, some existing MLH might become NaN and therefore 'invisible' for next filters (case for 19/12/20)
-        df[(df.index.day == 15)][60:90]["MLH"]
         df = rain_filter(df)
-        df[(df.index.day == 15)][60:90]["MLH"]
         print("filter Rain done")
 
 
@@ -1064,7 +1090,7 @@ def main(
         ds2_enco["FLAG"] = {"_FillValue": -999}
         del ds2_enco["station"]
 
-        uid = pwd.getpwnam("eprofile").pw_uid
+        uid = pwd.getpwnam("mvanhove").pw_uid
         gid = grp.getgrnam("eprofile").gr_gid
         ds = ds.sel(time=slice(day2, day2))
         ds = Change_dims(ds)
