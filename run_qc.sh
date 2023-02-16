@@ -10,10 +10,11 @@
 #rep='/home/mvanhove/STRATfinder/scripts/qc-sf-python/qc_daily_final.py'
 #config_file='/home/eprofile/eprofile/script/stratfinder/config/settings_STRATfinder_falkenberg_chm15k_0.json'
 
-rep='/home/mvanhove/STRATfinder/qc-sf-python/qc_daily_final.py'
+rep='/home/mvanhove/STRATfinder/qc-sf-python-develop/qc_daily_final.py'
 #config_file='/home/mvanhove/STRATfinder/scripts/v2022c_cl61_berlin/settings_STRATfinder_cl61_urbi_tempelhof.json'
 #config_file='/home/mvanhove/STRATfinder/conf_files/settings_STRATfinder_hdv_cl61_temp.json'
 config_file='/home/mvanhove/STRATfinder/stratfinder/config/settings_STRATfinder_magurele-rado_chm15k_B.json'
+values_qc='/home/mvanhove/STRATfinder/qc-sf-python-develop/values_qc.toml'
 
 module load nco/4.9.3
 module load git/2.31.0
@@ -56,13 +57,13 @@ do
  echo $day3
  echo $output_day2
 
- python ${rep} ${day1} ${file} ${day3} ${config_file} ${output_day2} 
+ python ${rep} ${day1} ${file} ${day3} ${config_file} ${values_qc} ${output_day2} 
 
  day1=$file
  file=$day3
  iter=$iter+1
  day3=${arr[$iter]}
  
- mv /homedata/mvanhove/L2A/rado/eprofile_L2A_STRATFINDER_magurele-rado_chm15k-B_v01_2022????_L2B_develop.nc /homedata/mvanhove/L2B/rado
+ #mv /homedata/mvanhove/L2A/rado/eprofile_L2A_STRATFINDER_magurele-rado_chm15k-B_v01_2022????_L2B_develop.nc /homedata/mvanhove/L2B/rado
 done
 
