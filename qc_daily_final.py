@@ -1207,18 +1207,21 @@ def main(
         FLAG_QC.attrs["long_name"] = "flag for MLH after quality control"
         ds["FLAG"] = FLAG_QC.transpose("time", "station")
 
-        ds.attrs[
-            "comment"
-        ] = "Mixed layer height after quality control; Git repository : git@gitlab.in2p3.fr:ipsl/sirta/mld/stratfinder/qc-sf-python.git"
+        # ds.attrs[
+        #    "comment"
+        # ] = "Mixed layer height after quality control; Git repository : git@gitlab.in2p3.fr:ipsl/sirta/mld/stratfinder/qc-sf-python.git"
 
         ## add history in output file
-        dir_path = os.path.dirname(os.path.realpath(f"{sys.argv[0]}"))
-        repo = git.Repo(f"{dir_path}")
-        sha = repo.head.commit.hexsha
-        sha = sha[0:6]
-        ds.attrs[
-            "history_qc"
-        ] = f"Version of quality control code : {sha} ; date of creation : {date_today}"
+        # dir_path = os.path.dirname(os.path.realpath(f"{sys.argv[0]}"))
+        # repo = git.Repo(f"{dir_path}")
+        # sha = repo.head.commit.hexsha
+        # sha = sha[0:6]
+        # print(ds.attrs["history"])
+        # ds.attrs["history"] = ds.attrs["history"] + "test"
+        # print(ds.attrs["history"])
+        # ds.attrs[
+        #    "history_qc"
+        # ] = f"Version of quality control code : {sha} ; date of creation : {date_today}"
 
         print("MLH replaced, FLAG added, History added")
 

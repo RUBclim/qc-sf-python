@@ -47,11 +47,11 @@ __author__ = "Melania Van Hove"
     ),
 )
 def main(l2a: Path, l2b: Path, output: Path) -> None:
-    """ 
+    """
 
     Args:
-        l2a (click.argument): L2A file of the d day 
-        l2b (click.argument): L2B file of the d day 
+        l2a (click.argument): L2A file of the d day
+        l2b (click.argument): L2B file of the d day
         output (click.argument): Output of the quicklooks files
     """
     # Check if the file
@@ -79,10 +79,10 @@ def main(l2a: Path, l2b: Path, output: Path) -> None:
             lon = df1.station_longitude[0]
             sun = SolarTime()
 
-            date = date(
+            date_ = date(
                 int(df1.index.year[0]), int(df1.index.month[0]), int(df1.index.day[0])
             )
-            schedule = sun.sun_utc(date, lat, lon)
+            schedule = sun.sun_utc(date_, lat, lon)
             ss = schedule["sunset"]
             sr = schedule["sunrise"]
 
@@ -158,4 +158,3 @@ def main(l2a: Path, l2b: Path, output: Path) -> None:
 
 if __name__ == "__main__":
     sys.exit(main())
-
