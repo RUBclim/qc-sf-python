@@ -795,9 +795,74 @@ def Change_dims(ds: xr.Dataset) -> xr.Dataset:
     ds = ds.transpose()
     return ds
 
-    #################################################################################################################################
-    ############################################# END FUNCTIONS######################################################################
-    #################################################################################################################################
+
+def Read_toml(file: str) -> Dict:
+    """Read the toml file 
+
+    Args:
+        file (str): file to read 
+
+    Returns:
+        Dict: toml file's content_
+    """
+    with open(file, mode="r") as fp:
+        cont_toml = toml.load(fp)
+    return cont_toml
+
+
+def Get_gloabal_attrs(ds: xr.Dataset, config_meta: Dict, dir_path : str) -> xr.Dataset:
+
+    """Add the global attributes contains into the toml configuration file
+    into the  
+
+    Args:
+        ds (xr.Dataset): xarray dataset 
+        config_meta (Dict): Dictionary containing the global attributes 
+        dir_path (str) : Path of the executed program 
+    Returns:
+        xr.Dataset : xarray dataset with added global attributes 
+    """
+
+    Global_attrs = config_meta["Global_attributes"]
+    for key in Global_attrs.keys():
+        ds.attrs[key] = Global_attrs[key]
+    # Fill some blank space that needs to be fill
+    ds["time_coverage_start"] = ds["time"].values(0)
+    ds["time_coverage_end"] = ds["time"].values(-1)
+    ds["geospatial_lat_min"] = ds["station_latitude"].values(0)
+    ds["geospatial_lat_max"] = ds["station_latitude"].values(0)
+    ds["geospatial_lon_min"] = ds["station_longitude"].values(0)
+    ds["geospatial_lon_max"] = ds["station_longitude"].values(0)
+    repo_qc = git.Repo(f"{dir_path}")
+    sha_qc = repo_qc.head.commit.hexsha[0:6]
+    # last_elem = dir_path.split('/')[-1]
+    # dir_str = dir_path.replace(f"/{last_elem}" , "")
+    # repo_str = git.Repo(f"{dir_str}")
+    # sha_str = repo_str.head.commit.hexsha[0:6]
+    ds["source"] = f"Automatic Lidar Ceilometer (ALC); Quality control version : {sha_qc}"
+    return ds
+
+def Get_vars_attr_enc(ds : xr.Dataset,config_meta: Dict) -> xr.Dataset
+    """Add the attributes and encoding contains into the toml configuration file
+    for each variable into the xarray dataset
+
+    Args:
+        ds (xr.Dataset): xarray dataset
+        config_meta (Dict): Dictionary containing the attributes and encoding for each variable
+    Returns:
+        xr.Dataset : xarray dataset with added encoding and attributes 
+    """
+    Vars_attrs = config_meta["Variables"]
+    for key in Vars_attrs.keys():
+        ds[key].attrs = Vars_attrs[key]["Attributes"]
+        ds[key].encoding = Vars_attrs[key]["Encoding"]
+    ds["station_name"].attrs["platform_id"] = ds["platform_id"].values(0)
+    ds = ds.drop_vars("platform_id")
+    return ds
+
+#################################################################################################################################
+############################################# END FUNCTIONS######################################################################
+#################################################################################################################################
 
 
 ############### CHECK IF ARGUMENTS ARE READABLE/WRITABLE ################
@@ -844,6 +909,14 @@ def Change_dims(ds: xr.Dataset) -> xr.Dataset:
         exists=True, readable=True, file_okay=True, dir_okay=False, resolve_path=True
     ),
 )
+# Configuration of the quality control values toml file
+@click.argument(
+    "config_attributes_file",
+    nargs=1,
+    type=click.Path(
+        exists=True, readable=True, file_okay=True, dir_okay=False, resolve_path=True
+    ),
+)
 # Output file to create the L2B files
 @click.argument(
     "output_day2a",
@@ -863,6 +936,7 @@ def main(
     day_3a: click.Path,
     config_filea: click.Path,
     file_values_qca: click.Path,
+    config_attributes_file: click.Path,
     output_day2a: click.Path,
 ) -> None:
 
@@ -872,13 +946,14 @@ def main(
     click.echo(click.format_filename(day_3a))
     click.echo(config_filea)
     click.echo(file_values_qca)
+    click.echo(config_attributes_file)
     click.echo(click.format_filename(output_day2a))
 
-    ## CONFIGURATION
-
-    with open(file_values_qca, mode="r") as fp:
-        values_qc = toml.load(fp)
-
+    # Read the values into the toml configuration file related to the values
+    values_qc = Read_toml(file_values_qca)
+    # Read the values of the toml configuration files related to the global and variable's attributes
+    attrs_dict = Read_toml(config_attributes_file)
+    # Define the datetime
     today = date.today()
     date_today = today.strftime("%B %d, %Y")
     maxmlh = get_maxmlh(config_filea)
@@ -1121,15 +1196,11 @@ def main(
 
         if (month2 < 3) | (month2 > 11):
             df = extreme(
-                df,
-                values_qc["extreme"]["fraction_of_the_max_mlh_cold"],
-                maxmlh,
+                df, values_qc["extreme"]["fraction_of_the_max_mlh_cold"], maxmlh,
             )
         else:
             df = extreme(
-                df,
-                values_qc["extreme"]["fraction_of_the_max_mlh_warm"],
-                maxmlh,
+                df, values_qc["extreme"]["fraction_of_the_max_mlh_warm"], maxmlh,
             )
         print("filter Extreme points done")
 
@@ -1143,8 +1214,7 @@ def main(
                 values_qc["residual_layer"]["threshold_to_remove_mlh_warm"],
             )
             df = rel_residual_layer(
-                df,
-                values_qc["rel_residual_layer"]["fraction_of_the_max_mlh_warm"],
+                df, values_qc["rel_residual_layer"]["fraction_of_the_max_mlh_warm"],
             )
         else:
             df = residual_layer(
@@ -1154,8 +1224,7 @@ def main(
                 values_qc["residual_layer"]["threshold_to_remove_mlh_cold"],
             )
             df = rel_residual_layer(
-                df,
-                values_qc["rel_residual_layer"]["fraction_of_the_max_mlh_cold"],
+                df, values_qc["rel_residual_layer"]["fraction_of_the_max_mlh_cold"],
             )
 
         print("filter Residual layer done")
@@ -1206,48 +1275,21 @@ def main(
         FLAG_QC.attrs["units"] = "1"
         FLAG_QC.attrs["long_name"] = "flag for MLH after quality control"
         ds["FLAG"] = FLAG_QC.transpose("time", "station")
-
-        # ds.attrs[
-        #    "comment"
-        # ] = "Mixed layer height after quality control; Git repository : git@gitlab.in2p3.fr:ipsl/sirta/mld/stratfinder/qc-sf-python.git"
-
-        ## add history in output file
-        # dir_path = os.path.dirname(os.path.realpath(f"{sys.argv[0]}"))
-        # repo = git.Repo(f"{dir_path}")
-        # sha = repo.head.commit.hexsha
-        # sha = sha[0:6]
-        # print(ds.attrs["history"])
-        # ds.attrs["history"] = ds.attrs["history"] + "test"
-        # print(ds.attrs["history"])
-        # ds.attrs[
-        #    "history_qc"
-        # ] = f"Version of quality control code : {sha} ; date of creation : {date_today}"
-
         print("MLH replaced, FLAG added, History added")
 
         ######## PREPARE L2A DATASET TO BE FILLED WITH NEW VARIABLES #########
-
-        ds2 = xr.open_dataset(day_2a)
-        ds2_enco = get_encoding(ds2)
-        ds2_enco["time"] = {
-            "calendar": "standard",
-            "dtype": "double",
-            "_FillValue": None,
-        }
-
-        ds2_enco["MLH"] = {"dtype": ds2["MLH"].encoding["dtype"], "_FillValue": "-999"}
-        ds2_enco["FLAG"] = {"_FillValue": -9}
-        del ds2_enco["station"]
-
+        # make sure that time is on just one day 
         ds = ds.sel(time=slice(day2, day2))
+        # Do some modifications on the dimensions 
         ds = Change_dims(ds)
-        ds2_enco["platform_id"] = ds["platform_id"].encoding
-        ds2_enco["station_name"] = ds["station_name"].encoding
-        ds.time.encoding["units"] = ds2["time"].encoding["units"] + "UTC"
-        ds.time.attrs["long_name"] = "time"
+        # add attributes 
+        dir_path = os.path.dirname(os.path.realpath(f"{sys.argv[0]}"))
+        ds = Get_gloabal_attrs(ds,attrs_dict,dir_path)
+        ds = Get_vars_attr_enc(ds,attrs_dict)
+        ds_enco = get_encoding(ds)
         ds.to_netcdf(
             output_day2a,
-            encoding=ds2_enco,
+            encoding=ds_enco,
             mode="w",
             engine="netcdf4",
             unlimited_dims=["time", "station_name"],
