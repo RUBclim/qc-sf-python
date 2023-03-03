@@ -53,16 +53,19 @@ featureType = "timeSeries"
 [Variables.time.Attributes]
 standard_name = "time"
 Axis = "T"
-long_name = "T"
+long_name = "time"
 comment = "The time values of the station, following the standard CF calendar, in days since 1970-01-01 00:00:00"
 coverage_content_type = "coordinate"
+units = "days since 1970-01-01"
+
 
 [Variables.time.Encoding]
-units = "days since 1970-01-01 00:00:00"
 dtype = "double"
+calendar = "standard"
+units = "days since 1970-01-01"
 complevel = 0
 zlib = true
-calendar = "standard"
+
 
 [Variables.station_name.Attributes]
 standard_name = "platform_name"
@@ -74,7 +77,7 @@ platform_id = ""
 ancillary_variables = "station_latitude station_longitude station_altitude sensor_height"
 
 [Variables.station_name.Encoding]
-dtype = "string"
+dtype = "str"
 complevel = 0
 zlib = true
 
@@ -84,10 +87,10 @@ Axis = "Y"
 long_name = "platform latitude"
 comment = "platform's latitude"
 coverage_content_type = "coordinate"
+units = "degrees_north"
 
 [Variables.station_latitude.Encoding]
 _FillValue = -999
-units = "degrees_north"
 dtype = "float"
 complevel = 0
 zlib = true
@@ -98,10 +101,10 @@ Axis = "X"
 long_name = "platform longitude"
 comment = "platform's longitude"
 coverage_content_type = "coordinate"
+units = "degrees_east"
 
 [Variables.station_longitude.Encoding]
 _FillValue = -999
-units = "degrees_east"
 dtype = "float"
 complevel = 0
 zlib = true
@@ -112,10 +115,10 @@ Axis = "Z"
 long_name = "platform altitude"
 comment = "platform's altitude"
 coverage_content_type = "coordinate"
+units = "m"
 
 [Variables.station_altitude.Encoding]
 _FillValue = -999
-units = "m"
 dtype = "float"
 complevel = 0
 zlib = true
@@ -125,10 +128,10 @@ standard_name = "platform_name height"
 long_name = "platform height"
 comment = "platform's height"
 coverage_content_type = "coordinate"
+units = "m"
 
 [Variables.sensor_height.Encoding]
 _FillValue = -999
-units = "m"
 dtype = "float"
 complevel = 0
 zlib = true
@@ -138,10 +141,10 @@ standard_name = "atmosphere_boundary_layer_thickness"
 long_name = "atmosphere boundary layer thickness"
 comment = "After quality control ; above ground level"
 coverage_content_type = "physicalMeasurement"
+units = "m"
 
 [Variables.ABLH.Encoding]
 _FillValue = -999
-units = "m"
 dtype = "float"
 complevel = 0
 zlib = true
@@ -150,10 +153,10 @@ zlib = true
 standard_name = "atmosphere_mixed_layer_thickness"
 long_name = "atmosphere mixed layer thickness"
 comment = "After quality control ; above ground level"
+units = "m"
 
 [Variables.MLH.Encoding]
 _FillValue = -999
-units = "m"
 dtype = "float"
 complevel = 0
 zlib = true
@@ -162,15 +165,15 @@ zlib = true
 standard_name = "cloud_base_altitude"
 long_name = "cloud base altitude"
 comment = "above ground level"
+units = "m"
 
 [Variables.cloud_base_altitude.Encoding]
 _FillValue = -999
-units = "m"
 dtype = "float"
 complevel = 0
 zlib = true
 
-[Variables.prepcip_FLAG.Attributes]
+[Variables.precip_FLAG.Attributes]
 standard_name = "precip_flag"
 long_name = "precipitation flag"
 comment = "precipitation flag"
@@ -178,9 +181,9 @@ flag_values = "0, 1"
 flag_meanings = "no_precipitation precipitation"
 valid_range = "0, 1"
 
-[Variables.prepcip_FLAG.Encoding]
+[Variables.precip_FLAG.Encoding]
 _FillValue = -9
-dtype = "int"
+dtype = "int32"
 complevel = 0
 zlib = true
 
@@ -194,6 +197,6 @@ valid_range = "0, 10000"
 
 [Variables.quality_FLAG.Encoding]
 _FillValue = -9
-dtype = "int"
+dtype = "int32"
 complevel = 0
 zlib = true

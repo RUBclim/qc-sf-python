@@ -810,7 +810,7 @@ def Read_toml(file: str) -> Dict:
     return cont_toml
 
 
-def Get_gloabal_attrs(ds: xr.Dataset, config_meta: Dict, dir_path : str) -> xr.Dataset:
+def Get_gloabal_attrs(ds: xr.Dataset, config_meta: Dict, dir_path: str) -> xr.Dataset:
 
     """Add the global attributes contains into the toml configuration file
     into the  
@@ -827,22 +827,25 @@ def Get_gloabal_attrs(ds: xr.Dataset, config_meta: Dict, dir_path : str) -> xr.D
     for key in Global_attrs.keys():
         ds.attrs[key] = Global_attrs[key]
     # Fill some blank space that needs to be fill
-    ds["time_coverage_start"] = ds["time"].values(0)
-    ds["time_coverage_end"] = ds["time"].values(-1)
-    ds["geospatial_lat_min"] = ds["station_latitude"].values(0)
-    ds["geospatial_lat_max"] = ds["station_latitude"].values(0)
-    ds["geospatial_lon_min"] = ds["station_longitude"].values(0)
-    ds["geospatial_lon_max"] = ds["station_longitude"].values(0)
+    ds.attrs["time_coverage_start"] = str(ds["time"].values[0])
+    ds.attrs["time_coverage_end"] = str(ds["time"].values[-1])
+    ds.attrs["geospatial_lat_min"] = ds["station_latitude"].values[0]
+    ds.attrs["geospatial_lat_max"] = ds["station_latitude"].values[0]
+    ds.attrs["geospatial_lon_min"] = ds["station_longitude"].values[0]
+    ds.attrs["geospatial_lon_max"] = ds["station_longitude"].values[0]
     repo_qc = git.Repo(f"{dir_path}")
     sha_qc = repo_qc.head.commit.hexsha[0:6]
     # last_elem = dir_path.split('/')[-1]
     # dir_str = dir_path.replace(f"/{last_elem}" , "")
     # repo_str = git.Repo(f"{dir_str}")
     # sha_str = repo_str.head.commit.hexsha[0:6]
-    ds["source"] = f"Automatic Lidar Ceilometer (ALC); Quality control version : {sha_qc}"
+    ds.attrs[
+        "source"
+    ] = f"Automatic Lidar Ceilometer (ALC); Quality control version : {sha_qc}"
     return ds
 
-def Get_vars_attr_enc(ds : xr.Dataset,config_meta: Dict) -> xr.Dataset
+
+def Get_vars_attr_enc(ds: xr.Dataset, config_meta: Dict) -> xr.Dataset:
     """Add the attributes and encoding contains into the toml configuration file
     for each variable into the xarray dataset
 
@@ -856,9 +859,12 @@ def Get_vars_attr_enc(ds : xr.Dataset,config_meta: Dict) -> xr.Dataset
     for key in Vars_attrs.keys():
         ds[key].attrs = Vars_attrs[key]["Attributes"]
         ds[key].encoding = Vars_attrs[key]["Encoding"]
-    ds["station_name"].attrs["platform_id"] = ds["platform_id"].values(0)
+    ds["station_name"].attrs["platform_id"] = (
+        ds["platform_id"].values[0].replace("?", "")
+    )
     ds = ds.drop_vars("platform_id")
     return ds
+
 
 #################################################################################################################################
 ############################################# END FUNCTIONS######################################################################
@@ -963,6 +969,7 @@ def main(
     ndata_day2 = int(len(df) / 3)
 
     with xr.open_dataset(day_2a) as ds:
+        print(ds["time"])
         site = ds.attrs["site_location"]  ## site name given in L2A by E-PROFILE
         month2 = ds["time"].dt.month[0].values
         warm = (month2 > 3) & (month2 < 10)
@@ -1263,29 +1270,25 @@ def main(
         df2["FLAG_QC"].fillna(-9, inplace=True)
 
         MLH = df2["MLH"].to_xarray()
-        MLH.attrs["units"] = "m"
-        MLH.attrs["long_name"] = "mixed layer height"
-        MLH.attrs["comment"] = "After quality control ; above ground level"
         ds["MLH"] = MLH.transpose("time", "station")
 
         ds = ds.rename({"FLAG": "precip_FLAG"})
-        ds.precip_FLAG.attrs["units"] = "range between 0 and 1"
 
         FLAG_QC = df2["FLAG_QC"].astype(np.int32).to_xarray()
-        FLAG_QC.attrs["units"] = "1"
-        FLAG_QC.attrs["long_name"] = "flag for MLH after quality control"
-        ds["FLAG"] = FLAG_QC.transpose("time", "station")
+        ds["quality_FLAG"] = FLAG_QC.transpose("time", "station")
         print("MLH replaced, FLAG added, History added")
 
         ######## PREPARE L2A DATASET TO BE FILLED WITH NEW VARIABLES #########
-        # make sure that time is on just one day 
+        # make sure that time is on just one day
         ds = ds.sel(time=slice(day2, day2))
-        # Do some modifications on the dimensions 
+        # Do some modifications on the dimensions
         ds = Change_dims(ds)
-        # add attributes 
+        # add attributes
         dir_path = os.path.dirname(os.path.realpath(f"{sys.argv[0]}"))
-        ds = Get_gloabal_attrs(ds,attrs_dict,dir_path)
-        ds = Get_vars_attr_enc(ds,attrs_dict)
+        ds = Get_gloabal_attrs(ds, attrs_dict, dir_path)
+        ds = Get_vars_attr_enc(ds, attrs_dict)
+        # Remove the attribute units to make it work
+        ds["time"].attrs.pop("units")
         ds_enco = get_encoding(ds)
         ds.to_netcdf(
             output_day2a,
