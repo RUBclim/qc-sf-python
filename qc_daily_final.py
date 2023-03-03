@@ -859,6 +859,7 @@ def Get_vars_attr_enc(ds: xr.Dataset, config_meta: Dict) -> xr.Dataset:
     for key in Vars_attrs.keys():
         ds[key].attrs = Vars_attrs[key]["Attributes"]
         ds[key].encoding = Vars_attrs[key]["Encoding"]
+    ds["time"].encoding["_FillValue"] = None
     ds["station_name"].attrs["platform_id"] = (
         ds["platform_id"].values[0].replace("?", "")
     )
