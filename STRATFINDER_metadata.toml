@@ -174,12 +174,12 @@ complevel = 0
 zlib = true
 
 [Variables.precip_FLAG.Attributes]
-standard_name = "precip_flag"
+standard_name = "quality_flag"
 long_name = "precipitation flag"
 comment = "precipitation flag"
-flag_values = "0, 1"
+flag_values = [0, 1]
 flag_meanings = "no_precipitation precipitation"
-valid_range = "0, 1"
+valid_range = [0,1]
 
 [Variables.precip_FLAG.Encoding]
 _FillValue = -9
@@ -191,9 +191,9 @@ zlib = true
 standard_name = "quality_flag"
 long_name = "mlh_flag"
 comment = "flag for MLH after quality control"
-flag_values = "0 1 10 100 1000 10000"
+flag_values = [0, 1, 10, 100, 1000, 10000]
 flag_meanings = "valid_mlh rain_detected stuck_MLH_during_daytime overestimation_of_MLH residual_layer"
-valid_range = "0, 10000"
+valid_range = [0, 10000]
 
 [Variables.quality_FLAG.Encoding]
 _FillValue = -9
