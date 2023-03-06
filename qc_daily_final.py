@@ -890,6 +890,10 @@ def Get_vars_attr_enc(ds: xr.Dataset, config_meta: Dict) -> xr.Dataset:
     ds["precip_FLAG"].attrs["valid_range"] = Transform_list_type(
         ds["precip_FLAG"].attrs["valid_range"], np.int32
     )
+    print(ds["station_altitude"].attrs["comment"].encode("utf8"))
+    # ds["station_altitude"].attrs["comment"] = (
+    #     ds["station_altitude"].attrs["comment"].encode("utf8")
+    # )
     ds = ds.drop_vars("platform_id")
     return ds
 
