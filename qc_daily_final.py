@@ -810,6 +810,19 @@ def Read_toml(file: str) -> Dict:
     return cont_toml
 
 
+def Transform_list_type(list_to_trans: list, type_to: str) -> list:
+    """Transform the list's element into a new type for example transform int64 to int32
+
+    Args:
+        list_to_trans (list): List to be transformed 
+        type_to (str  |  type): Type for the transformation
+
+    Returns:
+        list: Transformed list 
+    """
+    return list(np.array(list_to_trans).astype(type_to))
+
+
 def Get_gloabal_attrs(ds: xr.Dataset, config_meta: Dict, dir_path: str) -> xr.Dataset:
 
     """Add the global attributes contains into the toml configuration file
@@ -824,9 +837,16 @@ def Get_gloabal_attrs(ds: xr.Dataset, config_meta: Dict, dir_path: str) -> xr.Da
     """
 
     Global_attrs = config_meta["Global_attributes"]
-    for key in Global_attrs.keys():
-        ds.attrs[key] = Global_attrs[key]
-    # Fill some blank space that needs to be fill
+    dict_attrs = ds.attrs
+    ds.attrs = Global_attrs
+    ds.attrs["site_location"] = dict_attrs["site_location"]
+    ds.attrs["instrument_id"] = dict_attrs["instrument_id"]
+    ds.attrs["wmo_id"] = dict_attrs["wmo_id"]
+    ds.attrs["instrument_serial_number"] = dict_attrs["instrument_serial_number"]
+    ds.attrs["optical_module_id"] = dict_attrs["optical_module_id"]
+    ds.attrs["instrument_firmware_version"] = dict_attrs["instrument_firmware_version"]
+    ds.attrs["overlap_function"] = dict_attrs["overlap_function"]
+    ds.attrs["overlap_is_corrected"] = dict_attrs["overlap_is_corrected"]
     ds.attrs["time_coverage_start"] = str(ds["time"].values[0])
     ds.attrs["time_coverage_end"] = str(ds["time"].values[-1])
     ds.attrs["geospatial_lat_min"] = ds["station_latitude"].values[0]
@@ -838,25 +858,11 @@ def Get_gloabal_attrs(ds: xr.Dataset, config_meta: Dict, dir_path: str) -> xr.Da
     ds.attrs[
         "source"
     ] = f"Automatic Lidar Ceilometer (ALC); Quality control version : {sha_qc}"
-    list_attr_er = ["history", "principal_investigator", "history_qc"]
-    for key in list_attr_er:
-        if key in ds.attrs.keys():
-            ds.attrs.pop(key)
-
+    ds.attrs["geospatial_lat_min"] = np.float64(ds.attrs["geospatial_lat_min"])
+    ds.attrs["geospatial_lat_max"] = np.float64(ds.attrs["geospatial_lat_max"])
+    ds.attrs["geospatial_lon_min"] = np.float64(ds.attrs["geospatial_lon_min"])
+    ds.attrs["geospatial_lon_max"] = np.float64(ds.attrs["geospatial_lon_max"])
     return ds
-
-
-def Transform_list_type(list_to_trans: list, type_to: str) -> list:
-    """Transform the list's element into a new type for example transform int64 to int32
-
-    Args:
-        list_to_trans (list): List to be transformed 
-        type_to (str  |  type): Type for the transformation
-
-    Returns:
-        list: Transformed list 
-    """
-    return list(np.array(list_to_trans).astype(type_to))
 
 
 def Get_vars_attr_enc(ds: xr.Dataset, config_meta: Dict) -> xr.Dataset:
@@ -877,23 +883,12 @@ def Get_vars_attr_enc(ds: xr.Dataset, config_meta: Dict) -> xr.Dataset:
     ds["station_name"].attrs["platform_id"] = (
         ds["platform_id"].values[0].replace("?", "")
     ).strip()
-
-    ds["quality_FLAG"].attrs["valid_range"] = Transform_list_type(
-        ds["quality_FLAG"].attrs["valid_range"], np.int32
-    )
     ds["quality_FLAG"].attrs["flag_values"] = Transform_list_type(
         ds["quality_FLAG"].attrs["flag_values"], np.int32
     )
     ds["precip_FLAG"].attrs["flag_values"] = Transform_list_type(
         ds["precip_FLAG"].attrs["flag_values"], np.int32
     )
-    ds["precip_FLAG"].attrs["valid_range"] = Transform_list_type(
-        ds["precip_FLAG"].attrs["valid_range"], np.int32
-    )
-    print(ds["station_altitude"].attrs["comment"].encode("utf8"))
-    # ds["station_altitude"].attrs["comment"] = (
-    #     ds["station_altitude"].attrs["comment"].encode("utf8")
-    # )
     ds = ds.drop_vars("platform_id")
     return ds
 
@@ -1295,7 +1290,7 @@ def main(
 
         df2 = clean_time_array(xr.open_dataset(day_2a)).to_dataframe()
 
-        df2["FLAG_QC"] = list(df_day_2["FLAG_QC"].astype(int))
+        df2["FLAG_QC"] = list(df_day_2["FLAG_QC"].astype(np.int32))
         df2["FLAG_QC"] = df2["FLAG_QC"][np.isnan(df2["MLH"]) == False]
         df2["MLH"] = df2[df2.FLAG_QC == 0]["MLH"]
         df2["MLH"].fillna(-999, inplace=True)
