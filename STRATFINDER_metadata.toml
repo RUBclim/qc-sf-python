@@ -1,7 +1,7 @@
 [Global_attributes]
 Conventions = "ACDD-1.3, CF-1.8"
 title = "STRATfinder applied to  and quality control applied"
-summary = "Automatic Lidar Ceilometers (ALC) are gathering valuable data that allow for the Atmospheric Boundary Layer Height (ABLH)and Mixed Layer Height (MLH) to be derived in near real time. A new generation of advanced methods to automatically detect the ABL heights now exist. Here, the advanced algorithm STRATfinder is applied to high signal-to-noise ratio (SNR) ALC (CHM15k or CL61)observations, to derive both ABLH and MLH. (Kotthaus et al. (2020), Remote Sens.)"
+summary = "Automatic Lidar Ceilometers (ALC) are gathering valuable data that allow for the Atmospheric Boundary Layer Height (ABLH) and Mixed Layer Height (MLH) to be derived in near real time. A new generation of advanced methods to automatically detect the ABL heights now exist. Here, the advanced algorithm STRATfinder is applied to high signal-to-noise ratio (SNR) ALC (CHM15k or CL61) observations, to derive both ABLH and MLH. (Kotthaus et al. (2020), Remote Sens.)"
 references = "Kotthaus et al. 2020, RS"
 source = "Automatic Lidar Ceilometer (ALC); STRATFINDER vesion :    ; Quality control version :    "
 institution = "AERIS/ESPRI/IPSL"
@@ -52,7 +52,7 @@ featureType = "timeSeries"
 
 [Variables.time.Attributes]
 standard_name = "time"
-Axis = "T"
+axis = "T"
 long_name = "time"
 comment = "The time values of the station, following the standard CF calendar, in days since 1970-01-01 00:00:00"
 coverage_content_type = "coordinate"
@@ -74,7 +74,7 @@ comment = "platform's name"
 coverage_content_type = "auxiliaryInformation"
 cf_role = "timeseries_id"
 platform_id = ""
-ancillary_variables = "station_latitude station_longitude station_altitude sensor_height"
+#ancillary_variables = "station_latitude station_longitude station_altitude sensor_height"
 
 [Variables.station_name.Encoding]
 dtype = "str"
@@ -82,8 +82,9 @@ complevel = 0
 zlib = true
 
 [Variables.station_latitude.Attributes]
-standard_name = "platform_name latitude"
-Axis = "Y"
+#standard_name = "platform_name latitude"
+standard_name = "latitude"
+axis = "Y"
 long_name = "platform latitude"
 comment = "platform's latitude"
 coverage_content_type = "coordinate"
@@ -96,8 +97,9 @@ complevel = 0
 zlib = true
 
 [Variables.station_longitude.Attributes]
-standard_name = "platform_name longitude"
-Axis = "X"
+#standard_name = "platform_name longitude"
+standard_name = "longitude"
+axis = "X"
 long_name = "platform longitude"
 comment = "platform's longitude"
 coverage_content_type = "coordinate"
@@ -110,12 +112,14 @@ complevel = 0
 zlib = true
 
 [Variables.station_altitude.Attributes]
-standard_name = "platform_name altitude"
-Axis = "Z"
+#standard_name = "platform_name altitude"
+standard_name = "altitude"
+axis = "Z"
 long_name = "platform altitude"
 comment = "platform's altitude"
 coverage_content_type = "coordinate"
 units = "m"
+positive = "up"
 
 [Variables.station_altitude.Encoding]
 _FillValue = -999
@@ -124,12 +128,13 @@ complevel = 0
 zlib = true
 
 [Variables.sensor_height.Attributes]
-standard_name = "platform_name height"
+#standard_name = "platform_name height"
+standard_name = "altitude"
 long_name = "platform height"
 comment = "platform's height"
 coverage_content_type = "coordinate"
 units = "m"
-
+positive = "up"
 [Variables.sensor_height.Encoding]
 _FillValue = -999
 dtype = "float"
@@ -192,7 +197,7 @@ standard_name = "quality_flag"
 long_name = "mlh_flag"
 comment = "flag for MLH after quality control"
 flag_values = [0, 1, 10, 100, 1000, 10000]
-flag_meanings = "valid_mlh rain_detected stuck_MLH_during_daytime overestimation_of_MLH residual_layer"
+flag_meanings = "valid_mlh rain_detected stuck_MLH_during_daytime overestimation_of_MLH underestimation_during_deep_convection residual_layer"
 valid_range = [0, 10000]
 
 [Variables.quality_FLAG.Encoding]

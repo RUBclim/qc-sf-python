@@ -835,14 +835,28 @@ def Get_gloabal_attrs(ds: xr.Dataset, config_meta: Dict, dir_path: str) -> xr.Da
     ds.attrs["geospatial_lon_max"] = ds["station_longitude"].values[0]
     repo_qc = git.Repo(f"{dir_path}")
     sha_qc = repo_qc.head.commit.hexsha[0:6]
-    # last_elem = dir_path.split('/')[-1]
-    # dir_str = dir_path.replace(f"/{last_elem}" , "")
-    # repo_str = git.Repo(f"{dir_str}")
-    # sha_str = repo_str.head.commit.hexsha[0:6]
     ds.attrs[
         "source"
     ] = f"Automatic Lidar Ceilometer (ALC); Quality control version : {sha_qc}"
+    list_attr_er = ["history", "principal_investigator", "history_qc"]
+    for key in list_attr_er:
+        if key in ds.attrs.keys():
+            ds.attrs.pop(key)
+
     return ds
+
+
+def Transform_list_type(list_to_trans: list, type_to: str) -> list:
+    """Transform the list's element into a new type for example transform int64 to int32
+
+    Args:
+        list_to_trans (list): List to be transformed 
+        type_to (str  |  type): Type for the transformation
+
+    Returns:
+        list: Transformed list 
+    """
+    return list(np.array(list_to_trans).astype(type_to))
 
 
 def Get_vars_attr_enc(ds: xr.Dataset, config_meta: Dict) -> xr.Dataset:
@@ -862,6 +876,19 @@ def Get_vars_attr_enc(ds: xr.Dataset, config_meta: Dict) -> xr.Dataset:
     ds["time"].encoding["_FillValue"] = None
     ds["station_name"].attrs["platform_id"] = (
         ds["platform_id"].values[0].replace("?", "")
+    ).strip()
+
+    ds["quality_FLAG"].attrs["valid_range"] = Transform_list_type(
+        ds["quality_FLAG"].attrs["valid_range"], np.int32
+    )
+    ds["quality_FLAG"].attrs["flag_values"] = Transform_list_type(
+        ds["quality_FLAG"].attrs["flag_values"], np.int32
+    )
+    ds["precip_FLAG"].attrs["flag_values"] = Transform_list_type(
+        ds["precip_FLAG"].attrs["flag_values"], np.int32
+    )
+    ds["precip_FLAG"].attrs["valid_range"] = Transform_list_type(
+        ds["precip_FLAG"].attrs["valid_range"], np.int32
     )
     ds = ds.drop_vars("platform_id")
     return ds
@@ -1277,7 +1304,7 @@ def main(
 
         FLAG_QC = df2["FLAG_QC"].astype(np.int32).to_xarray()
         ds["quality_FLAG"] = FLAG_QC.transpose("time", "station")
-        print("MLH replaced, FLAG added, History added")
+        print("MLH replaced, FLAG added")
 
         ######## PREPARE L2A DATASET TO BE FILLED WITH NEW VARIABLES #########
         # make sure that time is on just one day
