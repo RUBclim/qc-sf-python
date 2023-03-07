@@ -181,9 +181,9 @@ def stuck_mlh(
 
     Args:
         df (dataframe): dataframe
-        threshold_day (scalar) : MLH upper limit to consider stuck MLH in the morning
-        threshold_afternoon (scalar) : MLH upper limit to consider stuck MLH in the afternoon
-        threshold_fraction_mlh (scalar): fraction of the total MLH to consider it stucked
+        threshold_day (float) : MLH upper limit to consider stuck MLH in the morning
+        threshold_afternoon (float) : MLH upper limit to consider stuck MLH in the afternoon
+        threshold_fraction_mlh (float): fraction of the total MLH to consider it stucked
 
     Returns:
         dataframe: flaggued dataframe
@@ -233,9 +233,9 @@ def massive_inc_night(df: pd.DataFrame, thresh, time_thresh, nl_mlh) -> pd.DataF
 
     Args:
         df (pd.DataFrame): dataframe
-        thresh (scalar): threshold (in m) typical of a strong increase
-        time_thresh (scalar) : time range considered to identify a decrease (in time steps) (scalar)
-        nl_mlh (scalar) : value of MLH considered valid after increase, if previous MLH if lower 
+        thresh (float): threshold (in m) typical of a strong increase
+        time_thresh (float) : time range considered to identify a decrease (in time steps)
+        nl_mlh (float) : value of MLH considered valid after increase, if previous MLH if lower 
 
     Returns:
         pd.DataFrame: flaggued dataframe
@@ -282,9 +282,9 @@ def massive_dec_night(df: pd.DataFrame, thresh, time_thresh, nl_mlh) -> pd.DataF
 
     Args:
         df (dataframe): dataframe
-        thresh (scalar): threshold typical of a strong decrease (absolute value in m)
-        time_thresh (scalar) : time range considered to identify a decrease (in time steps)
-        nl_mlh (scalar) : value of MLH considered valid before decrease, if following MLH if lower 
+        thresh (float): threshold typical of a strong decrease (absolute value in m)
+        time_thresh (float) : time range considered to identify a decrease (in time steps)
+        nl_mlh (float) : value of MLH considered valid before decrease, if following MLH if lower 
 
     Returns:
         pd.dataframe: flaggued dataframe
@@ -308,7 +308,11 @@ def massive_dec_night(df: pd.DataFrame, thresh, time_thresh, nl_mlh) -> pd.DataF
             l = df["MLH"] <= nl_mlh + 100
             print("nl_mlh = ", nl_mlh, " and  df['MLH'][idx] = ", df["MLH"][idx])
 
-            ss = df.time_relSR[d].idxmin()
+            if (df.index.month > 3) & (df.index.month < 10) :
+                ss = df.time_relSR[d].idxmin()
+            else :
+                ss = df.time_relSR[d].idxmin() + timedelta(hours=3)
+
             idx_prec = idx - timedelta(minutes=60)
             if df[t & d & l & (df.index < idx_prec)].index.max() is not pd.NaT:
                 print("removing from mlh is low enough to idx")
@@ -317,7 +321,7 @@ def massive_dec_night(df: pd.DataFrame, thresh, time_thresh, nl_mlh) -> pd.DataF
                 ind += df[a:idx].index.to_list()
 
             else:
-                print("removing from ss to idx")
+                print("removing from ss or ss+3 to idx")
                 ind += df[ss:idx].index.to_list()
 
     
@@ -335,7 +339,7 @@ def day_peaks(df: pd.DataFrame, thresh, time_range, mov_sum_step, when) -> pd.Da
 
     Args:
         df (dataframe): dataframe
-        thresh (scalar): threshold (in m) typical of a strong increase
+        thresh (float): threshold (in m) typical of a strong increase
         time_range (int) : time range considered to detect a decrease (in time step)
         mov_sum_step (int): time considered to define an increase (in time step)
         when (str): 'day time' or 'end afternoon'; end of afternoon being selected for summer
@@ -395,9 +399,9 @@ def cold_day_dec(
 
     Args:
         df (dataframe): dataframe
-        thresh (scalar): threshold (in m) typical of a strong decrease
+        thresh (float): threshold (in m) typical of a strong decrease
         time_steps_to_define_rolling_diff (int): time steps to define the difference
-        winter_mlh (scalar) : MLH after decrease if real one is too low and might remove too much data 
+        winter_mlh (float) : MLH after decrease if real one is too low and might remove too much data 
 
     Returns:
         datframe: flaggued dataframe
@@ -514,7 +518,7 @@ def dip_afternoon(df, thresh, time_thresh):
 
     Args:
         df (pd.DataFrame): dataframe
-        thresh (scalar): threshold (in m) typical of a increase/decrease
+        thresh (float): threshold (in m) typical of a increase/decrease
         time_thresh (int) : time range considered to identify an increase/decrease (in time steps)
 
     Returns:
@@ -589,10 +593,10 @@ def massive_inc_afternoon(
 
     Args:
         df (pd.DataFrame): dataframe
-        thresh (scalar): threshold (in m) typical of a strong increase
-        time_thresh (scalar) : time relative to sunset from which to consider increase (in hour)
-        threshold_to_considered_stable_mlh (scalar) : maximum value of the difference between 2 MLH to consider them stable 
-        time_bef_ss (scalar) : time considered before sunset to detect increase
+        thresh (float): threshold (in m) typical of a strong increase
+        time_thresh (float) : time relative to sunset from which to consider increase (in hour)
+        threshold_to_considered_stable_mlh (float) : maximum value of the difference between 2 MLH to consider them stable 
+        time_bef_ss (float) : time considered before sunset to detect increase
 
     Returns:
         pd.DataFrame: flaggued dataframe
@@ -663,8 +667,8 @@ def extreme(df: pd.DataFrame, frac_maxmlh, maxmlh) -> pd.DataFrame:
 
     Args:
         df (pd.dataframe): dataframe
-        frac_maxmlh (scalar): fraction of the maxmlh considered as the threshold (scalar between 0 and 1)
-        maxmlh (scalar) : maximum MLH set in config file
+        frac_maxmlh (float): fraction of the maxmlh considered as the threshold (float between 0 and 1)
+        maxmlh (float) : maximum MLH set in config file
 
     Returns:
         pd.dataframe: flaggued dataframe
@@ -681,9 +685,9 @@ def residual_layer(df: pd.DataFrame, thresh1, thresh2, thresh3) -> pd.DataFrame:
 
     Args:
         df (pd.dataframe): dataframe
-        thresh1 (scalar) : threshold above which MLH is detected
-        thresh2 (scalar) : amount needed of MLH above thresh1 to be considered as residual layer (between 0 and 1)
-        thresh3 (scalar) : threshold above which MLH is removed
+        thresh1 (float) : threshold above which MLH is detected
+        thresh2 (float) : amount needed of MLH above thresh1 to be considered as residual layer (between 0 and 1)
+        thresh3 (float) : threshold above which MLH is removed
 
     Returns:
         pd.dataframe: flaggued dataframe
@@ -722,7 +726,7 @@ def rel_residual_layer(df: pd.DataFrame, frac_max) -> pd.DataFrame:
 
     Args:
         df (pd.dataframe): dataframe
-        frac_max (scalar) : fraction considered of the maximum of daytime (scalar between 0 and 1)
+        frac_max (float) : fraction considered of the maximum of daytime (float between 0 and 1)
 
     Returns:
         pd.dataframe: flaggued dataframe
