@@ -129,7 +129,7 @@ def Get_coverage(ds: xr.Dataset, var: str):
     return list_var[0], list_var[-1]
 
 
-def rain_filter(df: pd.DataFrame, time_step_thresh) -> pd.DataFrame:
+def rain_filter(df: pd.DataFrame, time_step_thresh: int) -> pd.DataFrame:
     """Remove day (or night) if more than 10% of rain more than 3h in the day (or night)
 
     Args:
@@ -165,12 +165,14 @@ def rain_filter(df: pd.DataFrame, time_step_thresh) -> pd.DataFrame:
         df.FLAG_QC + 1
     )  ## if profn >= 12 (=3h) in one night, the night is flaggued
 
-
     return df
 
 
 def stuck_mlh(
-    df: pd.DataFrame, threshold_day, threshold_afternoon, threshold_fraction_mlh
+    df: pd.DataFrame,
+    threshold_day: float,
+    threshold_afternoon: float,
+    threshold_fraction_mlh: float,
 ) -> pd.DataFrame:
     """remove stuck low MLH during daytime in warm seasons;
         conditions to remove the day :
@@ -221,12 +223,14 @@ def stuck_mlh(
             + 10
         )
 
-    #print(df[np.isnan(df["FLAG_QC"]) == True])
+    # print(df[np.isnan(df["FLAG_QC"]) == True])
 
     return df
 
 
-def massive_inc_night(df: pd.DataFrame, thresh, time_thresh, nl_mlh) -> pd.DataFrame:
+def massive_inc_night(
+    df: pd.DataFrame, thresh: float, time_thresh: int, nl_mlh: float
+) -> pd.DataFrame:
     """remove following layer after a massive increase at night
         the following layer is considered as a residual layer
         while the lower one is considered as the real noctural layer
@@ -275,7 +279,9 @@ def massive_inc_night(df: pd.DataFrame, thresh, time_thresh, nl_mlh) -> pd.DataF
     return df
 
 
-def massive_dec_night(df: pd.DataFrame, thresh, time_thresh, nl_mlh) -> pd.DataFrame:
+def massive_dec_night(
+    df: pd.DataFrame, thresh: float, time_thresh: int, nl_mlh: float
+) -> pd.DataFrame:
     """remove preceding layer after a massive decrease at night
         the preceding layer is considered as a residual layer
         while the lower one is considered as the real noctural layer
@@ -308,9 +314,9 @@ def massive_dec_night(df: pd.DataFrame, thresh, time_thresh, nl_mlh) -> pd.DataF
             l = df["MLH"] <= nl_mlh + 100
             print("nl_mlh = ", nl_mlh, " and  df['MLH'][idx] = ", df["MLH"][idx])
 
-            if (df.index.month > 3) & (df.index.month < 10) :
+            if (df.index.month > 3) & (df.index.month < 10):
                 ss = df.time_relSR[d].idxmin()
-            else :
+            else:
                 ss = df.time_relSR[d].idxmin() + timedelta(hours=3)
 
             idx_prec = idx - timedelta(minutes=60)
@@ -324,7 +330,6 @@ def massive_dec_night(df: pd.DataFrame, thresh, time_thresh, nl_mlh) -> pd.DataF
                 print("removing from ss or ss+3 to idx")
                 ind += df[ss:idx].index.to_list()
 
-    
     ind = pd.unique(ind)
     ind = df["FLAG_QC"][ind][df.FLAG_QC == 0].index.to_list()
     df["FLAG_QC"][ind] = df["FLAG_QC"][ind] + 100
@@ -332,7 +337,9 @@ def massive_dec_night(df: pd.DataFrame, thresh, time_thresh, nl_mlh) -> pd.DataF
     return df
 
 
-def day_peaks(df: pd.DataFrame, thresh, time_range, mov_sum_step, when) -> pd.DataFrame:
+def day_peaks(
+    df: pd.DataFrame, thresh: float, time_range: int, mov_sum_step: int, when: str
+) -> pd.DataFrame:
     """remove sharp increases followed by decreases during daytime or end of afternoon
         which are often local overestimations ; if the increase is higher than 2*thresh,
         it is considered as a real growth
@@ -391,7 +398,10 @@ def day_peaks(df: pd.DataFrame, thresh, time_range, mov_sum_step, when) -> pd.Da
 
 
 def cold_day_dec(
-    df: pd.DataFrame, thresh, time_steps_to_define_rolling_diff, winter_mlh
+    df: pd.DataFrame,
+    thresh: float,
+    time_steps_to_define_rolling_diff: int,
+    winter_mlh: float,
 ) -> pd.DataFrame:
     """remove overestimation before massive increases during daytime in cold seasons, detected by sharp
     and massive decreases (based on 17/03/22 at Lindenberg). MLH is removed from decrease backward in time until
@@ -493,7 +503,7 @@ def create_df3day(day_1a: Path, day_2a: Path, day_3a: Path) -> pd.DataFrame:
     else:
         df1 = None
         print(f"{day_1a} n'existe pas et est remplacé par un dataframe vide")
-    
+
     if isFile3 == True:
         df3 = clean_time_array(xr.open_dataset(day_3a)).to_dataframe()
         df3 = df3.reset_index(level=0, drop=True)
@@ -509,7 +519,7 @@ def create_df3day(day_1a: Path, day_2a: Path, day_3a: Path) -> pd.DataFrame:
     return df
 
 
-def dip_afternoon(df, thresh, time_thresh):
+def dip_afternoon(df: pd.DataFrame, thresh: float, time_thresh: int) -> pd.DataFrame:
     """remove dips occuring in the middle of the afternoon
         the decrease is defined by the threshold while the following increase is
         defined by half of the threshold in case it occurs during the evening transition
@@ -586,8 +596,12 @@ def dip_afternoon(df, thresh, time_thresh):
 
 
 def massive_inc_afternoon(
-    df, thresh, time_thresh, threshold_to_considered_stable_mlh, time_bef_ss
-):
+    df: pd.DataFrame,
+    thresh: float,
+    time_thresh: float,
+    threshold_to_considered_stable_mlh: float,
+    time_bef_ss: float,
+) -> pd.DataFrame:
     """remove a sharp increase in the end of afternoon to avoid overestimation
         less strict during summer in case of heat waves
 
@@ -662,7 +676,7 @@ def massive_inc_afternoon(
     return df
 
 
-def extreme(df: pd.DataFrame, frac_maxmlh, maxmlh) -> pd.DataFrame:
+def extreme(df: pd.DataFrame, frac_maxmlh: float, maxmlh: float) -> pd.DataFrame:
     """Remove extreme points in winter
 
     Args:
@@ -676,11 +690,13 @@ def extreme(df: pd.DataFrame, frac_maxmlh, maxmlh) -> pd.DataFrame:
     df.FLAG_QC[(df.MLH > (frac_maxmlh * maxmlh)) & (df.FLAG_QC == 0)] = (
         df.FLAG_QC[(df.MLH > (frac_maxmlh * maxmlh)) & (df.FLAG_QC == 0)] + 100
     )
-    #print(df[np.isnan(df["FLAG_QC"]) == True])
+    # print(df[np.isnan(df["FLAG_QC"]) == True])
     return df
 
 
-def residual_layer(df: pd.DataFrame, thresh1, thresh2, thresh3) -> pd.DataFrame:
+def residual_layer(
+    df: pd.DataFrame, thresh1: float, thresh2: float, thresh3: float
+) -> pd.DataFrame:
     """Remove residual layer (night) with absolute values
 
     Args:
@@ -718,7 +734,7 @@ def residual_layer(df: pd.DataFrame, thresh1, thresh2, thresh3) -> pd.DataFrame:
     return df
 
 
-def rel_residual_layer(df: pd.DataFrame, frac_max) -> pd.DataFrame:
+def rel_residual_layer(df: pd.DataFrame, frac_max: float) -> pd.DataFrame:
     """Remove residual layer (night) with relative values
         in winter, a higher nocturnal layer is allowed relatively to daytime
         in other seasons, the maximum MLH at daytime is considered the maximum
@@ -735,7 +751,9 @@ def rel_residual_layer(df: pd.DataFrame, frac_max) -> pd.DataFrame:
     d2 = df.day == 2
     d3 = df.day == 3
     max_d1 = df.MLH[d1 & (df.time_relSR > 4)].max()
-    df.FLAG_QC[(df.time_relSR < 0) & d2 & (df.MLH > frac_max * max_d1) & (df.FLAG_QC < 10000)] = (
+    df.FLAG_QC[
+        (df.time_relSR < 0) & d2 & (df.MLH > frac_max * max_d1) & (df.FLAG_QC < 10000)
+    ] = (
         df.FLAG_QC[
             (df.time_relSR < 0)
             & d2
@@ -747,7 +765,9 @@ def rel_residual_layer(df: pd.DataFrame, frac_max) -> pd.DataFrame:
 
     max_d2 = df.MLH[d2 & (df.time_relSR > 4)].max()
     print(df.FLAG_QC[(df.time_relSR < 0) & d3 & (df.MLH > frac_max * max_d2)])
-    df.FLAG_QC[(df.time_relSR < 0) & d3 & (df.MLH > frac_max * max_d2) & (df.FLAG_QC < 10000)] = (
+    df.FLAG_QC[
+        (df.time_relSR < 0) & d3 & (df.MLH > frac_max * max_d2) & (df.FLAG_QC < 10000)
+    ] = (
         df.FLAG_QC[
             (df.time_relSR < 0)
             & d3
@@ -1083,10 +1103,9 @@ def main(
             sunrise.append(sunrise1)
             sunset.append(sunset1)
             date_ = date_ + timedelta(days=1)
-        
+
         print(sunrise)
         print(sunset)
-
 
         ## COLUMNS 'time_relSR' : time relative to sunrise; 'time_relSS' : time relative to sunset; 'day' : from sunset to sunset
 
@@ -1120,7 +1139,6 @@ def main(
                 n = n + 1
             else:
                 df.at[i, "day"] = n
-
 
         print("Time relative to SR, SS, and day relative to SS done")
 
@@ -1250,7 +1268,6 @@ def main(
             values_qc["dip_afternoon"]["time_steps_to_define_rolling_diff"],
         )
 
-
         ## EXTREME POINTS
 
         if (month2 < 3) | (month2 > 11):
@@ -1272,7 +1289,7 @@ def main(
                 values_qc["residual_layer"]["fraction_considered_residual_mlh_warm"],
                 values_qc["residual_layer"]["threshold_to_remove_mlh_warm"],
             )
-                        
+
             df = rel_residual_layer(
                 df, values_qc["rel_residual_layer"]["fraction_of_the_max_mlh_warm"],
             )
@@ -1292,7 +1309,6 @@ def main(
             )
 
             print("relative residual layer filter done")
-
 
         print("filter Residual layer done")
 
@@ -1323,9 +1339,9 @@ def main(
 
         df2 = clean_time_array(xr.open_dataset(day_2a)).to_dataframe()
 
-        #print(df["FLAG_QC"][0:60])
+        # print(df["FLAG_QC"][0:60])
         print(df[np.isnan(df["FLAG_QC"]) == True])
-        #print(df_day_2[np.isnan(df_day_2["FLAG_QC"]) == True][0:60])
+        # print(df_day_2[np.isnan(df_day_2["FLAG_QC"]) == True][0:60])
 
         df2["FLAG_QC"] = list(df_day_2["FLAG_QC"].astype(np.int32))
         df2["FLAG_QC"] = df2["FLAG_QC"][np.isnan(df2["MLH"]) == False]
