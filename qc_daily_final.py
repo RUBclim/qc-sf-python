@@ -180,6 +180,9 @@ def stuck_mlh(
 
     Args:
         df (_type_): dataframe
+        threshold_day : MLH upper limit to consider stuck MLH in the morning
+        threshold_afternoon : MLH upper limit to consider stuck MLH in the afternoon
+        threshold_fraction_mlh : fraction of the total MLH to consider it stucked
 
     Returns:
         _type_: flaggued dataframe
@@ -382,18 +385,18 @@ def day_peaks(df: pd.DataFrame, thresh, time_range, mov_sum_step, when) -> pd.Da
 def cold_day_dec(
     df: pd.DataFrame, thresh, time_steps_to_define_rolling_diff, winter_mlh
 ) -> pd.DataFrame:
-    """remove massive increases during daytime in cold seasons, detected by sharp
-    and massive decreases
+    """remove overestimation before massive increases during daytime in cold seasons, detected by sharp
+    and massive decreases (based on 17/03/22 at Lindenberg). MLH is removed from decrease backward in time until
+    value of MLH after decrease is reached
 
     Args:
         df (_type_): dataframe
         thresh (_type_): threshold (in m) typical of a strong decrease
+        time_steps_to_define_rolling_diff : time steps to define the difference
+        winter_mlh : MLH after decrease if real one is too low and might remove too much data 
 
     Returns:
         _type_: flaggued dataframe
-
-    Comments :
-        based on 17/03/22 at Lindenberg
     """
     d = df.day == 2
     mov_sum = df["diff"].rolling(time_steps_to_define_rolling_diff).sum()
@@ -584,6 +587,7 @@ def massive_inc_afternoon(
         df (pd.DataFrame): dataframe
         thresh (_type_): threshold (in m) typical of a strong increase
         time_thresh (_type_) : time relative to sunset from which to consider increase (in hour) (scalar)
+        threshold_to_considered_stable_mlh : maximum value of the difference between 2 MLH to consider them stable 
         time_bef_ss (_type_) : time considered before sunset to detect increase
 
     Returns:
@@ -593,7 +597,7 @@ def massive_inc_afternoon(
     mov_sum = df["diff"].rolling(time_thresh).sum()
     cond_increase = mov_sum > thresh
     cond_decrease = mov_sum < -thresh
-    cond_stag = mov_sum < 200
+    cond_stag = mov_sum < threshold_to_considered_stable_mlh
     t = (df.time_relSS > -time_bef_ss) & ((df.time_relSR >= 0))
     df2 = df[t & (cond_increase == True) & d]
     ind = []
