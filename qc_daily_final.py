@@ -115,7 +115,7 @@ def Get_coverage(ds: xr.Dataset, var: str):
         var (str): variable to chose
 
     Returns:
-        _type_: min and max values of the variable
+        min and max values of the variable
     """
     list_var = list(ds.keys())
     list_dim = list(ds.coords)
@@ -133,11 +133,11 @@ def rain_filter(df: pd.DataFrame, time_step_thresh) -> pd.DataFrame:
     """Remove day (or night) if more than 10% of rain more than 3h in the day (or night)
 
     Args:
-        df (_type_): dataframe
-        time_step_thresh: how many time steps to consider rain can affect MLH detection
+        df (pd.dataframe): dataframe
+        time_step_thresh (int): how many time steps to consider rain can affect MLH detection
 
     Returns:
-        _type_: flaggued dataframe
+        pd.dataframe: flaggued dataframe
     """
 
     df2 = (
@@ -180,13 +180,13 @@ def stuck_mlh(
         more than 50% of the afternoon MLH is lower than 500m
 
     Args:
-        df (_type_): dataframe
-        threshold_day : MLH upper limit to consider stuck MLH in the morning
-        threshold_afternoon : MLH upper limit to consider stuck MLH in the afternoon
-        threshold_fraction_mlh : fraction of the total MLH to consider it stucked
+        df (dataframe): dataframe
+        threshold_day (scalar) : MLH upper limit to consider stuck MLH in the morning
+        threshold_afternoon (scalar) : MLH upper limit to consider stuck MLH in the afternoon
+        threshold_fraction_mlh (scalar): fraction of the total MLH to consider it stucked
 
     Returns:
-        _type_: flaggued dataframe
+        dataframe: flaggued dataframe
 
     Comments :
         occurs if morning growth is not detected by STRATFinder
@@ -233,9 +233,9 @@ def massive_inc_night(df: pd.DataFrame, thresh, time_thresh, nl_mlh) -> pd.DataF
 
     Args:
         df (pd.DataFrame): dataframe
-        thresh (_scalar_): threshold (in m) typical of a strong increase
-        time_thresh (_scalar_) : time range considered to identify a decrease (in time steps) (scalar)
-        nl_mlh (_scalar_) : value of MLH considered valid after increase, if previous MLH if lower 
+        thresh (scalar): threshold (in m) typical of a strong increase
+        time_thresh (scalar) : time range considered to identify a decrease (in time steps) (scalar)
+        nl_mlh (scalar) : value of MLH considered valid after increase, if previous MLH if lower 
 
     Returns:
         pd.DataFrame: flaggued dataframe
@@ -281,13 +281,13 @@ def massive_dec_night(df: pd.DataFrame, thresh, time_thresh, nl_mlh) -> pd.DataF
         while the lower one is considered as the real noctural layer
 
     Args:
-        df (_type_): dataframe
+        df (dataframe): dataframe
         thresh (scalar): threshold typical of a strong decrease (absolute value in m)
         time_thresh (scalar) : time range considered to identify a decrease (in time steps)
         nl_mlh (scalar) : value of MLH considered valid before decrease, if following MLH if lower 
 
     Returns:
-        _type_: flaggued dataframe
+        pd.dataframe: flaggued dataframe
     """
     d = (df.day == 2) | (df.day == 3)
     mov_sum = df["diff"][d].rolling(time_thresh).sum()
@@ -334,16 +334,16 @@ def day_peaks(df: pd.DataFrame, thresh, time_range, mov_sum_step, when) -> pd.Da
         it is considered as a real growth
 
     Args:
-        df (_type_): dataframe
-        thresh (_type_): threshold (in m) typical of a strong increase
-        time_range : time range considered to detect a decrease (in time step)
-        mov_sum_step : time considered to define an increase (in time step)
-        when : day time or end of afternoon; end of afternoon being selected for summer
+        df (dataframe): dataframe
+        thresh (scalar): threshold (in m) typical of a strong increase
+        time_range (int) : time range considered to detect a decrease (in time step)
+        mov_sum_step (int): time considered to define an increase (in time step)
+        when (str): 'day time' or 'end afternoon'; end of afternoon being selected for summer
             and massive peaks, to avoid removing peaks occuring during heat waves
             in the middle of the afternon (ex : 19/07/22 at Palaiseau, France)
 
     Returns:
-        _type_: flaggued dataframe
+        pd.dataframe: flaggued dataframe
     """
     d = df.day == 2
     mov_sum = df["diff"].rolling(mov_sum_step).sum()
@@ -394,13 +394,13 @@ def cold_day_dec(
     value of MLH after decrease is reached
 
     Args:
-        df (_type_): dataframe
-        thresh (_type_): threshold (in m) typical of a strong decrease
-        time_steps_to_define_rolling_diff : time steps to define the difference
-        winter_mlh : MLH after decrease if real one is too low and might remove too much data 
+        df (dataframe): dataframe
+        thresh (scalar): threshold (in m) typical of a strong decrease
+        time_steps_to_define_rolling_diff (int): time steps to define the difference
+        winter_mlh (scalar) : MLH after decrease if real one is too low and might remove too much data 
 
     Returns:
-        _type_: flaggued dataframe
+        datframe: flaggued dataframe
     """
     d = df.day == 2
     mov_sum = df["diff"].rolling(time_steps_to_define_rolling_diff).sum()
@@ -514,8 +514,8 @@ def dip_afternoon(df, thresh, time_thresh):
 
     Args:
         df (pd.DataFrame): dataframe
-        thresh (_type_): threshold (in m) typical of a increase/decrease
-        time_thresh (_type_) : time range considered to identify an increase/decrease (in time steps) (scalar)
+        thresh (scalar): threshold (in m) typical of a increase/decrease
+        time_thresh (int) : time range considered to identify an increase/decrease (in time steps)
 
     Returns:
         pd.DataFrame: flaggued dataframe
@@ -589,10 +589,10 @@ def massive_inc_afternoon(
 
     Args:
         df (pd.DataFrame): dataframe
-        thresh (_type_): threshold (in m) typical of a strong increase
-        time_thresh (_type_) : time relative to sunset from which to consider increase (in hour) (scalar)
-        threshold_to_considered_stable_mlh : maximum value of the difference between 2 MLH to consider them stable 
-        time_bef_ss (_type_) : time considered before sunset to detect increase
+        thresh (scalar): threshold (in m) typical of a strong increase
+        time_thresh (scalar) : time relative to sunset from which to consider increase (in hour)
+        threshold_to_considered_stable_mlh (scalar) : maximum value of the difference between 2 MLH to consider them stable 
+        time_bef_ss (scalar) : time considered before sunset to detect increase
 
     Returns:
         pd.DataFrame: flaggued dataframe
@@ -662,12 +662,12 @@ def extreme(df: pd.DataFrame, frac_maxmlh, maxmlh) -> pd.DataFrame:
     """Remove extreme points in winter
 
     Args:
-        df (_type_): dataframe
-        frac_maxmlh : fraction of the maxmlh considered as the threshold (scalar between 0 and 1)
-        maxmlh : maximum MLH set in config file (scalar)
+        df (pd.dataframe): dataframe
+        frac_maxmlh (scalar): fraction of the maxmlh considered as the threshold (scalar between 0 and 1)
+        maxmlh (scalar) : maximum MLH set in config file
 
     Returns:
-        _type_: flaggued dataframe
+        pd.dataframe: flaggued dataframe
     """
     df.FLAG_QC[(df.MLH > (frac_maxmlh * maxmlh)) & (df.FLAG_QC == 0)] = (
         df.FLAG_QC[(df.MLH > (frac_maxmlh * maxmlh)) & (df.FLAG_QC == 0)] + 100
@@ -680,13 +680,13 @@ def residual_layer(df: pd.DataFrame, thresh1, thresh2, thresh3) -> pd.DataFrame:
     """Remove residual layer (night) with absolute values
 
     Args:
-        df (_type_): dataframe
-        thresh1 : threshold above which MLH is detected
-        thresh2 : amount needed of MLH above thresh1 to be considered as residual layer (between 0 and 1)
-        thresh3 : threshold above which MLH is removed
+        df (pd.dataframe): dataframe
+        thresh1 (scalar) : threshold above which MLH is detected
+        thresh2 (scalar) : amount needed of MLH above thresh1 to be considered as residual layer (between 0 and 1)
+        thresh3 (scalar) : threshold above which MLH is removed
 
     Returns:
-        _type_: flaggued dataframe
+        pd.dataframe: flaggued dataframe
     """
     ii = (df.time_relSS > 2) & (df.time_relSR < 2)
     df2 = (
@@ -721,11 +721,11 @@ def rel_residual_layer(df: pd.DataFrame, frac_max) -> pd.DataFrame:
             allowed for night time
 
     Args:
-        df (_type_): dataframe
-        frac_max (_type_) : fraction considered of the maximum of daytime (scalar between 0 and 1)
+        df (pd.dataframe): dataframe
+        frac_max (scalar) : fraction considered of the maximum of daytime (scalar between 0 and 1)
 
     Returns:
-        _type_: flaggued dataframe
+        pd.dataframe: flaggued dataframe
     """
     d1 = df.day == 1
     d2 = df.day == 2
