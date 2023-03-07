@@ -878,6 +878,7 @@ def Get_gloabal_attrs(ds: xr.Dataset, config_meta: Dict, dir_path: str) -> xr.Da
     ds.attrs = Global_attrs
     ds.attrs["site_location"] = dict_attrs["site_location"]
     ds.attrs["instrument_id"] = dict_attrs["instrument_id"]
+    ds.attrs["instrument_type"] = dict_attrs["instrument_type"]
     ds.attrs["wmo_id"] = dict_attrs["wmo_id"]
     ds.attrs["instrument_serial_number"] = dict_attrs["instrument_serial_number"]
     ds.attrs["optical_module_id"] = dict_attrs["optical_module_id"]
@@ -899,6 +900,11 @@ def Get_gloabal_attrs(ds: xr.Dataset, config_meta: Dict, dir_path: str) -> xr.Da
     ds.attrs["geospatial_lat_max"] = np.float64(ds.attrs["geospatial_lat_max"])
     ds.attrs["geospatial_lon_min"] = np.float64(ds.attrs["geospatial_lon_min"])
     ds.attrs["geospatial_lon_max"] = np.float64(ds.attrs["geospatial_lon_max"])
+    inst = dict_attrs["site_location"].lower()
+    city = dict_attrs["site_location"].lower()
+    ds.attrs[
+        "title"
+    ] = f"STRATfinder applied to the {inst} instrument and quality control applied located at {city}"
     return ds
 
 
