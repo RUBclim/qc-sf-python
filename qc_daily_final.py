@@ -900,7 +900,7 @@ def Get_gloabal_attrs(ds: xr.Dataset, config_meta: Dict, dir_path: str) -> xr.Da
     ds.attrs["geospatial_lat_max"] = np.float64(ds.attrs["geospatial_lat_max"])
     ds.attrs["geospatial_lon_min"] = np.float64(ds.attrs["geospatial_lon_min"])
     ds.attrs["geospatial_lon_max"] = np.float64(ds.attrs["geospatial_lon_max"])
-    inst = dict_attrs["site_location"].lower()
+    inst = dict_attrs["instrument_type"].lower()
     city = dict_attrs["site_location"].lower()
     ds.attrs[
         "title"
