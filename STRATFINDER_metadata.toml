@@ -166,7 +166,6 @@ complevel = 0
 zlib = true
 
 [Variables.MLH.Attributes]
-standard_name = "atmosphere_mixed_layer_thickness"
 long_name = "atmosphere mixed layer thickness"
 comment = "After quality control ; above ground level"
 units = "m"
