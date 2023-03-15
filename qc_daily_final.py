@@ -248,7 +248,7 @@ def massive_inc_night(
     print("start massive_inc_night with thresh = ", thresh)
     mov_sum = df["diff"][d].rolling(time_thresh).sum()
     cond_increase = mov_sum > thresh
-    df2 = df[(df.time_relSR <= 1) & d & (cond_increase == True)]
+    df2 = df[(df.time_relSR <= 1) & d & cond_increase]
     t = df["time_relSR"] < 4
     ind = []
 
@@ -260,7 +260,7 @@ def massive_inc_night(
             nl_mlh = df["MLH"][idx] - mov_sum[idx]
             if nl_mlh < 300:
                 nl_mlh = 300
-            l = df["MLH"] <= nl_mlh
+            l = df["MLH"] <= nl_mlh + 200
             print("nl_mlh = ", nl_mlh, " and  df['MLH'][idx] = ", df["MLH"][idx])
 
             idx_last = df[(df.time_relSR == 4) & d].index.to_list()
@@ -298,7 +298,7 @@ def massive_dec_night(
     d = (df.day == 2) | (df.day == 3)
     mov_sum = df["diff"][d].rolling(time_thresh).sum()
     cond_decrease = mov_sum < thresh
-    df2 = df[(df.time_relSR <= 1) & d & (cond_decrease == True)]
+    df2 = df[(df.time_relSR <= 1) & d & cond_decrease]
     t = df["time_relSS"] > 2
     ind = []
 
@@ -311,10 +311,10 @@ def massive_dec_night(
             else:
                 nl_mlh = df["MLH"][idx]
 
-            l = df["MLH"] <= nl_mlh + 100
+            l = df["MLH"] <= nl_mlh + 200
             print("nl_mlh = ", nl_mlh, " and  df['MLH'][idx] = ", df["MLH"][idx])
 
-            if ((df.index.month > 3) & (df.index.month < 10)).all():
+            if ((df2.index.month[0] > 3) & (df2.index.month[0] < 10)).all():
                 ss = df.time_relSR[d].idxmin()
             else:
                 ss = df.time_relSR[d].idxmin() + timedelta(hours=3)
@@ -363,10 +363,10 @@ def day_peaks(
     cond_decrease = mov_sum < -thresh + 100
     if when == "end afternoon":
         df2 = df[
-            (df.time_relSR > 0) & (cond_increase == True) & d & (df.time_relSS >= -3)
+            (df.time_relSR > 0) & cond_increase & d & (df.time_relSS >= -3)
         ]
     else:
-        df2 = df[(df.time_relSR > 0) & (cond_increase == True) & d]
+        df2 = df[(df.time_relSR > 0) & cond_increase & d]
     l = cond_decrease == True
     t = df["time_relSR"] > 0
     ind = []
@@ -420,7 +420,7 @@ def cold_day_dec(
     mov_sum = df["diff"].rolling(time_steps_to_define_rolling_diff).sum()
     print("cold_day_dec function")
     cond_decrease = mov_sum < thresh
-    df2 = df[(df.time_relSR > 0) & (df.time_relSS < -2) & (cond_decrease == True) & d]
+    df2 = df[(df.time_relSR > 0) & (df.time_relSS < -2) & cond_decrease & d]
     t = df["time_relSR"] > 0
     ind = []
     if df2.index.size != 0:
@@ -538,7 +538,7 @@ def dip_afternoon(df: pd.DataFrame, thresh: float, time_thresh: int) -> pd.DataF
     mov_sum = df["diff"][d].rolling(time_thresh).sum()
     cond_increase = mov_sum > thresh * 0.5
     cond_decrease = mov_sum < -thresh
-    df2 = df[(df.time_relSR > 4) & (cond_decrease == True) & d]
+    df2 = df[(df.time_relSR > 4) & cond_decrease & d]
     t = df["time_relSR"] > 0
 
     ind = []
@@ -546,10 +546,10 @@ def dip_afternoon(df: pd.DataFrame, thresh: float, time_thresh: int) -> pd.DataF
         print("dip afternoon activated")
         for idx in df2.index:
             if (
-                df[d & t & ((cond_increase) == True) & (df.index > idx)].index.max()
+                df[d & t & cond_increase & (df.index > idx)].index.max()
                 is not pd.NaT
             ):
-                a = df[d & t & (cond_increase) == True & (df.index > idx)].index.max()
+                a = df[d & t & cond_increase & (df.index > idx)].index.max()
                 ind += df[idx : a + timedelta(minutes=15)].index.to_list()
                 print("decrease followed by increase")
 
@@ -620,8 +620,8 @@ def massive_inc_afternoon(
     cond_increase = mov_sum > thresh
     cond_decrease = mov_sum < -thresh
     cond_stag = mov_sum < threshold_to_considered_stable_mlh
-    t = (df.time_relSS > -time_bef_ss) & ((df.time_relSR >= 0))
-    df2 = df[t & (cond_increase == True) & d]
+    t = (df.time_relSS > -time_bef_ss) & (df.time_relSR >= 0)
+    df2 = df[t & cond_increase & d]
     ind = []
     if df2.index.size != 0:
         print("massive increase in end of afternoon activated")
@@ -642,17 +642,17 @@ def massive_inc_afternoon(
                 a = df[
                     (df.index <= idx)
                     & (df.index >= idx - timedelta(minutes=300))
-                    & (cond_decrease == True)
+                    & cond_decrease
                 ].index.max()
                 a = a - timedelta(minutes=60)
                 ind += df[a:idx].index.to_list()
 
             elif (
-                df[(df.index >= idx) & (cond_decrease == True) & d].index.min()
+                df[(df.index >= idx) & cond_decrease & d].index.min()
                 is not pd.NaT
             ):
                 print("strong increase followed by decrease")
-                a = df[(df.index >= idx) & (cond_decrease == True) & d].index.min()
+                a = df[(df.index >= idx) & cond_decrease & d].index.min()
                 a = a + timedelta(minutes=60)
                 ind += df[idx:a].index.to_list()
 
@@ -1162,7 +1162,7 @@ def main(
 
         ##REMOVE STUCK MLH AT DAY/WARM SEASONS
 
-        if (site != "LERWICK,UK") & (warm == True):
+        if (site != "LERWICK,UK") & warm:
             df = stuck_mlh(
                 df,
                 values_qc["stuck_mlh"]["threshold_day"],
@@ -1218,7 +1218,7 @@ def main(
             "all day",
         )
 
-        if warm == True:
+        if warm:
             df = day_peaks(
                 df,
                 values_qc["day_peak"]["threshold_increase"] + 100,
@@ -1242,7 +1242,7 @@ def main(
                 values_qc["cold_day_dec"]["winter_mlh"],
             )
 
-        if summer == True:
+        if summer:
             df = massive_inc_afternoon(
                 df,
                 values_qc["massive_inc_afternoon"]["threshold_increase_or_decrease"],
@@ -1288,7 +1288,7 @@ def main(
 
         ## RESIDUAL LAYER
 
-        if warm == True:
+        if warm:
             df = residual_layer(
                 df,
                 values_qc["residual_layer"]["threshold_to_detect_mlh_warm"],
