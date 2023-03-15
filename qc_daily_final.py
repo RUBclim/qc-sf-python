@@ -311,7 +311,7 @@ def massive_dec_night(
             l = df["MLH"] <= nl_mlh + 200
             print("nl_mlh = ", nl_mlh, " and  df['MLH'][idx] = ", df["MLH"][idx])
 
-            if ((df2.index.month[0] > 3) & (df2.index.month[0] < 10)).all():
+            if ((df2.index.month > 3) & (df2.index.month < 10)).all():
                 ss = df.time_relSR[d].idxmin()
             else:
                 ss = df.time_relSR[d].idxmin() + timedelta(hours=3)
