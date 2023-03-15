@@ -1,7 +1,13 @@
 ## SCRIPT : qc_daily_final.py
 
 
-### Arguments : L2A D-1 ;  L2A D ; L2A D+1 ;  config_file ;  L2B D 
+### Arguments : L2A D-1 ;  L2A D ; L2A D+1 ;  config_file ; values_qc ; values_attr ; L2B D 
+L2A D-1 : path of file D-1
+L2A D : path of file D
+L2A D+1 : path of file D+1
+config_file : path of the configuration file (there should be one for each site)
+values_qc = path of file ```values_qc.toml```
+values_attr = path of file ```STRATFINDER_metadata.toml```
 
 
 ### Rôle
