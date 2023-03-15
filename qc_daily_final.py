@@ -223,8 +223,6 @@ def stuck_mlh(
             + 10
         )
 
-    # print(df[np.isnan(df["FLAG_QC"]) == True])
-
     return df
 
 
@@ -254,7 +252,6 @@ def massive_inc_night(
 
     if df2.index.size > 0:
         print("massive_inc_night activated with thresh = ", thresh)
-        print(df2.index)
         for idx in df2.index:
             d = df.day == df2.day[idx]
             nl_mlh = df["MLH"][idx] - mov_sum[idx]
@@ -466,9 +463,8 @@ def create_df3day(day_1a: Path, day_2a: Path, day_3a: Path) -> pd.DataFrame:
     Returns:
         pd.dataframe : merged dataframe of these 3 files
     """
-    isFile1, isFile2, isFile3 = (
+    isFile1, isFile3 = (
         os.path.isfile(day_1a),
-        os.path.isfile(day_2a),
         os.path.isfile(day_3a),
     )
 
@@ -690,7 +686,6 @@ def extreme(df: pd.DataFrame, frac_maxmlh: float, maxmlh: float) -> pd.DataFrame
     df.FLAG_QC[(df.MLH > (frac_maxmlh * maxmlh)) & (df.FLAG_QC == 0)] = (
         df.FLAG_QC[(df.MLH > (frac_maxmlh * maxmlh)) & (df.FLAG_QC == 0)] + 100
     )
-    # print(df[np.isnan(df["FLAG_QC"]) == True])
     return df
 
 
@@ -729,7 +724,6 @@ def residual_layer(
                 + 10000
             )
 
-    print(df[np.isnan(df["FLAG_QC"]) == True])
 
     return df
 
@@ -764,7 +758,6 @@ def rel_residual_layer(df: pd.DataFrame, frac_max: float) -> pd.DataFrame:
     )
 
     max_d2 = df.MLH[d2 & (df.time_relSR > 4)].max()
-    print(df.FLAG_QC[(df.time_relSR < 0) & d3 & (df.MLH > frac_max * max_d2)])
     df.FLAG_QC[
         (df.time_relSR < 0) & d3 & (df.MLH > frac_max * max_d2) & (df.FLAG_QC < 10000)
     ] = (
@@ -1037,15 +1030,12 @@ def main(
     df = create_df3day(day_1a, day_2a, day_3a)
     print("complete dataframe created")
     ndata_day2 = int(len(df) / 3)
-    print(len(df))
-    print(ndata_day2)
 
     with xr.open_dataset(day_2a) as ds:
-        print(ds["time"])
         site = ds.attrs["site_location"]  ## site name given in L2A by E-PROFILE
         month2 = ds["time"].dt.month[0].values
-        warm = (month2 > 3) & (month2 < 10)
-        summer = (month2 > 5) & (month2 < 9)
+        warm = (month2 > 3) and (month2 < 10)
+        summer = (month2 > 5) and (month2 < 9)
         lat = ds["station_latitude"][0].values
         lon = ds["station_longitude"][0].values
         ds = clean_time_array(ds)
@@ -1110,8 +1100,6 @@ def main(
             sunset.append(sunset1)
             date_ = date_ + timedelta(days=1)
 
-        print(sunrise)
-        print(sunset)
 
         ## COLUMNS 'time_relSR' : time relative to sunrise; 'time_relSS' : time relative to sunset; 'day' : from sunset to sunset
 
@@ -1344,10 +1332,6 @@ def main(
         ######## PREPARE L2A DATAFRAME TO BE FILLED WITH NEW FLAG_QC AND THEREFORE NEW MLH #########
 
         df2 = clean_time_array(xr.open_dataset(day_2a)).to_dataframe()
-
-        # print(df["FLAG_QC"][0:60])
-        print(df[np.isnan(df["FLAG_QC"]) == True])
-        # print(df_day_2[np.isnan(df_day_2["FLAG_QC"]) == True][0:60])
 
         df2["FLAG_QC"] = list(df_day_2["FLAG_QC"].astype(np.int32))
         df2["FLAG_QC"] = df2["FLAG_QC"][np.isnan(df2["MLH"]) == False]
