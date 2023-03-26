@@ -237,7 +237,7 @@ def massive_inc_night(
         df (pd.DataFrame): dataframe
         thresh (float): float threshold (in m) typical of a strong increase
         time_thresh (int) : integer time steps considered to identify a decrease (in time steps)
-        nl_mlh (float) : float MLH considered valid after increase, if previous MLH if lower 
+        nl_mlh (float) : float MLH considered valid after increase, if previous MLH if lower
 
     Returns:
         pd.DataFrame: flaggued dataframe
@@ -287,7 +287,7 @@ def massive_dec_night(
         df (dataframe): dataframe
         thresh (float): float threshold typical of a strong decrease (absolute value in m)
         time_thresh (int) : int time steps considered to identify a decrease
-        nl_mlh (float) : foat value of MLH considered valid before decrease, if following MLH if lower 
+        nl_mlh (float) : foat value of MLH considered valid before decrease, if following MLH if lower
 
     Returns:
         pd.dataframe: flaggued dataframe
@@ -359,9 +359,7 @@ def day_peaks(
     cond_increase = (mov_sum > thresh) & (mov_sum < thresh * 2)
     cond_decrease = mov_sum < -thresh + 100
     if when == "end afternoon":
-        df2 = df[
-            (df.time_relSR > 0) & cond_increase & d & (df.time_relSS >= -3)
-        ]
+        df2 = df[(df.time_relSR > 0) & cond_increase & d & (df.time_relSS >= -3)]
     else:
         df2 = df[(df.time_relSR > 0) & cond_increase & d]
     l = cond_decrease == True
@@ -378,14 +376,19 @@ def day_peaks(
                     & (df.index <= idx + timedelta(minutes=time_range))
                 ].index.min()
                 is not pd.NaT
-            ):  # & (df["MLH"][idx] < 2500):
+            ):
                 print("increase during day then decrease within time_range defined")
                 a = df[
                     l
                     & (df.index >= idx)
                     & (df.index <= idx + timedelta(minutes=time_range))
                 ].index.min()
-                ind = ind + df[idx : a + timedelta(minutes=15)].index.to_list()
+                ind = (
+                    ind
+                    + df[
+                        idx - timedelta(minutes=60) : a + timedelta(minutes=15)
+                    ].index.to_list()
+                )
 
     ind = pd.unique(ind)
     ind = df["FLAG_QC"][ind][df.FLAG_QC == 0].index.to_list()
@@ -408,7 +411,7 @@ def cold_day_dec(
         df (dataframe): dataframe
         thresh (float): float threshold (in m) typical of a strong decrease
         time_steps_to_define_rolling_diff (int): integer time steps to define the difference
-        winter_mlh (float) : float MLH after decrease if real one is too low and might remove too much data 
+        winter_mlh (float) : float MLH after decrease if real one is too low and might remove too much data
 
     Returns:
         datframe: flaggued dataframe
@@ -541,10 +544,7 @@ def dip_afternoon(df: pd.DataFrame, thresh: float, time_thresh: int) -> pd.DataF
     if df2.index.size != 0:
         print("dip afternoon activated")
         for idx in df2.index:
-            if (
-                df[d & t & cond_increase & (df.index > idx)].index.max()
-                is not pd.NaT
-            ):
+            if df[d & t & cond_increase & (df.index > idx)].index.max() is not pd.NaT:
                 a = df[d & t & cond_increase & (df.index > idx)].index.max()
                 ind += df[idx : a + timedelta(minutes=15)].index.to_list()
                 print("decrease followed by increase")
@@ -605,7 +605,7 @@ def massive_inc_afternoon(
         df (pd.DataFrame): dataframe
         thresh (float): float threshold (in m) typical of a strong increase
         time_thresh (float) : float amount of hours relative to sunset from which to consider increase
-        threshold_to_considered_stable_mlh (float) : float maximum value of the difference between 2 MLH to consider them stable 
+        threshold_to_considered_stable_mlh (float) : float maximum value of the difference between 2 MLH to consider them stable
         time_bef_ss (float) : float amount of hours considered before sunset to detect increase
 
     Returns:
@@ -643,10 +643,7 @@ def massive_inc_afternoon(
                 a = a - timedelta(minutes=60)
                 ind += df[a:idx].index.to_list()
 
-            elif (
-                df[(df.index >= idx) & cond_decrease & d].index.min()
-                is not pd.NaT
-            ):
+            elif df[(df.index >= idx) & cond_decrease & d].index.min() is not pd.NaT:
                 print("strong increase followed by decrease")
                 a = df[(df.index >= idx) & cond_decrease & d].index.min()
                 a = a + timedelta(minutes=60)
@@ -723,7 +720,6 @@ def residual_layer(
                 df.FLAG_QC[(df.time_relSR < 3) & (df.day == d) & (df.MLH > thresh3)]
                 + 10000
             )
-
 
     return df
 
@@ -827,10 +823,10 @@ def Change_dims(ds: xr.Dataset) -> xr.Dataset:
 
 
 def Read_toml(file: str) -> Dict:
-    """Read the toml file 
+    """Read the toml file
 
     Args:
-        file (str): file to read 
+        file (str): file to read
 
     Returns:
         Dict: toml file's content_
@@ -844,11 +840,11 @@ def Transform_list_type(list_to_trans: list, type_to: str) -> list:
     """Transform the list's element into a new type for example transform int64 to int32
 
     Args:
-        list_to_trans (list): List to be transformed 
+        list_to_trans (list): List to be transformed
         type_to (str  |  type): Type for the transformation
 
     Returns:
-        list: Transformed list 
+        list: Transformed list
     """
     return list(np.array(list_to_trans).astype(type_to))
 
@@ -856,14 +852,14 @@ def Transform_list_type(list_to_trans: list, type_to: str) -> list:
 def Get_gloabal_attrs(ds: xr.Dataset, config_meta: Dict, dir_path: str) -> xr.Dataset:
 
     """Add the global attributes contains into the toml configuration file
-    into the  
+    into the
 
     Args:
-        ds (xr.Dataset): xarray dataset 
-        config_meta (Dict): Dictionary containing the global attributes 
-        dir_path (str) : Path of the executed program 
+        ds (xr.Dataset): xarray dataset
+        config_meta (Dict): Dictionary containing the global attributes
+        dir_path (str) : Path of the executed program
     Returns:
-        xr.Dataset : xarray dataset with added global attributes 
+        xr.Dataset : xarray dataset with added global attributes
     """
 
     Global_attrs = config_meta["Global_attributes"]
@@ -909,7 +905,7 @@ def Get_vars_attr_enc(ds: xr.Dataset, config_meta: Dict) -> xr.Dataset:
         ds (xr.Dataset): xarray dataset
         config_meta (Dict): Dictionary containing the attributes and encoding for each variable
     Returns:
-        xr.Dataset : xarray dataset with added encoding and attributes 
+        xr.Dataset : xarray dataset with added encoding and attributes
     """
     Vars_attrs = config_meta["Variables"]
     for key in Vars_attrs.keys():
@@ -1100,7 +1096,6 @@ def main(
             sunset.append(sunset1)
             date_ = date_ + timedelta(days=1)
 
-
         ## COLUMNS 'time_relSR' : time relative to sunrise; 'time_relSS' : time relative to sunset; 'day' : from sunset to sunset
 
         Time = [i / 4.0 for i in range(1, ndata_day2 + 1)]
@@ -1198,21 +1193,13 @@ def main(
                 if (i - idx2) <= timedelta(minutes=120):
                     df["diff"][i] = df.MLH[i] - df.MLH[idx2]
 
-        df = day_peaks(
-            df,
-            values_qc["day_peak"]["threshold_increase"],
-            values_qc["day_peak"]["time_range_to_detect_decrease"],
-            values_qc["day_peak"]["time_steps_to_define_rolling_diff"],
-            "all day",
-        )
-
         if warm:
             df = day_peaks(
                 df,
                 values_qc["day_peak"]["threshold_increase"] + 100,
                 values_qc["day_peak"]["time_range_to_detect_decrease"] + 60,
                 values_qc["day_peak"]["time_steps_to_define_rolling_diff"] + 1,
-                "end afternoon",
+                "end afternoon",  ## works at 13 & 14/06/2022 Granada
             )
         else:
             df = day_peaks(
@@ -1254,6 +1241,14 @@ def main(
                 2 * values_qc["massive_inc_afternoon"]["time_considered_before_sunset"],
             )
 
+            df = day_peaks(
+                df,
+                values_qc["day_peak"]["threshold_increase"],
+                values_qc["day_peak"]["time_range_to_detect_decrease"],
+                values_qc["day_peak"]["time_steps_to_define_rolling_diff"],
+                "all day",
+            )
+
         print("filter Massive Increase/decrease at day done")
 
         df = dip_afternoon(
@@ -1266,11 +1261,15 @@ def main(
 
         if (month2 < 3) | (month2 > 11):
             df = extreme(
-                df, values_qc["extreme"]["fraction_of_the_max_mlh_cold"], maxmlh,
+                df,
+                values_qc["extreme"]["fraction_of_the_max_mlh_cold"],
+                maxmlh,
             )
         else:
             df = extreme(
-                df, values_qc["extreme"]["fraction_of_the_max_mlh_warm"], maxmlh,
+                df,
+                values_qc["extreme"]["fraction_of_the_max_mlh_warm"],
+                maxmlh,
             )
         print("filter Extreme points done")
 
@@ -1285,7 +1284,8 @@ def main(
             )
 
             df = rel_residual_layer(
-                df, values_qc["rel_residual_layer"]["fraction_of_the_max_mlh_warm"],
+                df,
+                values_qc["rel_residual_layer"]["fraction_of_the_max_mlh_warm"],
             )
 
         else:
@@ -1299,7 +1299,8 @@ def main(
             print("absolute residual layer filter done")
 
             df = rel_residual_layer(
-                df, values_qc["rel_residual_layer"]["fraction_of_the_max_mlh_cold"],
+                df,
+                values_qc["rel_residual_layer"]["fraction_of_the_max_mlh_cold"],
             )
 
             print("relative residual layer filter done")
