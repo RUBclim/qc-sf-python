@@ -31,19 +31,20 @@ __author__ = "Melania Van Hove"
 #################################################################################################################################
 
 
-def list_files(dir: str) -> List:
-    """[list the files inside the directory]
+def list_files(dir: str, filtre: str) -> List:
+    """[list the files inside the directory with a choosen filter]
 
     Args:
         dir ([str]): [directory to list file inside of it ]
-
+        filtre ([list]) : filters
     Returns:
         [list]: [list of files inside of directory ]
     """
     file_list = []
     for dirs, subdirs, files in os.walk(dir):
         for file in files:
-            file_list.append(os.path.join(dirs, file))
+            if all(filt in file for filt in filter):
+                file_list.append(os.path.join(dirs, file))
     return file_list
 
 
@@ -158,7 +159,7 @@ def main(
         _type_: _description_
     """
     # List all th concatenated L2B files
-    list_concat_L2B = list_files(path_all_years)
+    list_concat_L2B = list_files(path_all_years, ["STRATFINDER", "1min"])
     # Get an averaging dataframe
     lat, lon, start_date, end_date, ave_df = average_dataframe(list_concat_L2B)
     ## TIME RELATIVE TO SUNRISE DEFINITION
