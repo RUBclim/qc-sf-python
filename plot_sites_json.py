@@ -43,14 +43,15 @@ def list_files(dir: str, filtre: str) -> List:
     file_list = []
     for dirs, subdirs, files in os.walk(dir):
         for file in files:
-            if all(filt in file for filt in filter):
+            if all(filt in file for filt in filtre):
+                print(file)
                 file_list.append(os.path.join(dirs, file))
     return file_list
 
 
 def average_dataframe(
     list_files: List,
-) -> Tuple(str, str, pd.DatetimeIndex, pd.DatetimeIndex, pd.DataFrame):
+) -> Tuple[str, str, pd.DatetimeIndex, pd.DatetimeIndex, pd.DataFrame]:
     """_summary_
 
     Args:
@@ -127,7 +128,7 @@ def average_dataframe(
 )
 # Version of the Release
 @click.argument(
-    "VL2B", nargs=1,
+    "vl2b", nargs=1,
 )
 
 #################################################################################################################################
@@ -142,7 +143,7 @@ def main(
     site_o: str,
     inst: str,
     inst_id: str,
-    VL2B: str,
+    vl2b: str,
 ) -> None:
     """_summary_
 
@@ -288,12 +289,13 @@ def main(
 
     ## JSON FILE
     outfile = (
-        f"eprofile_cycle_STRATFINDER_{site_name}_{inst}_{inst_id}_{VL2B}_{month}.json"
+        f"eprofile_cycle_STRATFINDER_{site_name}_{inst}_{inst_id}_{vl2b}_{month}.json"
     )
     # json file loacation
     uid = pwd.getpwnam("eprofile").pw_uid
     gid = grp.getgrnam("eprofile").gr_gid
     output = f"{site_o}/{outfile}"
+    print(f"output written : {output}")
     with open(f"{output}", "w") as f:
         json.dump(data, f)
     os.chmod(output, 0o644)
