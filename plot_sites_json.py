@@ -288,9 +288,10 @@ def main(
     }
 
     ## JSON FILE
-    outfile = (
-        f"eprofile_cycle_STRATFINDER_{site_name}_{inst}_{inst_id}_{vl2b}_{month}.json"
-    )
+    if int(month) < 10:
+        outfile = f"eprofile_cycle_STRATFINDER_{site_name}_{inst}_{inst_id}_{vl2b}_0{month}.json"
+    else:
+        outfile = f"eprofile_cycle_STRATFINDER_{site_name}_{inst}_{inst_id}_{vl2b}_{month}.json"
     # json file loacation
     uid = pwd.getpwnam("eprofile").pw_uid
     gid = grp.getgrnam("eprofile").gr_gid
