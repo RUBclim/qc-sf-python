@@ -893,7 +893,7 @@ def Get_gloabal_attrs(ds: xr.Dataset, config_meta: Dict, dir_path: str) -> xr.Da
     city = dict_attrs["site_location"].lower()
     ds.attrs[
         "title"
-    ] = f"STRATfinder applied to the {inst} instrument and quality control applied located at {city}"
+    ] = f"STRATfinder applied on {inst}; quality controlled; {city}"
     return ds
 
 
