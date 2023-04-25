@@ -67,7 +67,6 @@ def add_to_dict(dict_json: Dict, dict_nc: Dict, list_filt: List) -> Dict:
 
 
 def get_maxmlh(json_file: str) -> str:
-
     """Extract the maxmlh from the json configuration file
 
     Args:
@@ -188,7 +187,7 @@ def stuck_mlh(
         threshold_fraction_mlh (float): float fraction of the total MLH to consider it stucked
 
     Returns:
-        dataframe: flaggued dataframe
+        pd.dataframe: flaggued dataframe
 
     Comments :
         occurs if morning growth is not detected by STRATFinder
@@ -414,7 +413,7 @@ def cold_day_dec(
         winter_mlh (float) : float MLH after decrease if real one is too low and might remove too much data
 
     Returns:
-        datframe: flaggued dataframe
+        pd.datframe: flaggued dataframe
     """
     d = df.day == 2
     mov_sum = df["diff"].rolling(time_steps_to_define_rolling_diff).sum()
@@ -850,7 +849,6 @@ def Transform_list_type(list_to_trans: list, type_to: str) -> list:
 
 
 def Get_gloabal_attrs(ds: xr.Dataset, config_meta: Dict, dir_path: str) -> xr.Dataset:
-
     """Add the global attributes contains into the toml configuration file
     into the
 
@@ -891,9 +889,7 @@ def Get_gloabal_attrs(ds: xr.Dataset, config_meta: Dict, dir_path: str) -> xr.Da
     ds.attrs["geospatial_lon_max"] = np.float64(ds.attrs["geospatial_lon_max"])
     inst = dict_attrs["instrument_type"].lower()
     city = dict_attrs["site_location"].lower()
-    ds.attrs[
-        "title"
-    ] = f"STRATfinder applied on {inst}; quality controlled; {city}"
+    ds.attrs["title"] = f"STRATfinder applied on {inst}; quality controlled; {city}"
     return ds
 
 
@@ -1004,7 +1000,6 @@ def main(
     config_attributes_file: click.Path,
     output_day2a: click.Path,
 ) -> None:
-
     ## CHECK IF FILES
     click.echo(click.format_filename(day_1a))
     click.echo(click.format_filename(day_2a))

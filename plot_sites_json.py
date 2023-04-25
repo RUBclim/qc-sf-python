@@ -26,9 +26,9 @@ __version__ = "1.0.0"
 __author__ = "Melania Van Hove"
 
 
-#################################################################################################################################
-#############################################FUNCTION############################################################################
-#################################################################################################################################
+####################################################################################################
+#############################################  FUNCTIONS  ##########################################
+####################################################################################################
 
 
 def list_files(dir: str, filtre: str) -> List:
@@ -51,18 +51,18 @@ def list_files(dir: str, filtre: str) -> List:
 
 def average_dataframe(
     list_files: List,
-) -> Tuple[str, str, pd.DatetimeIndex, pd.DatetimeIndex, pd.DataFrame]:
-    """_summary_
+) -> Tuple[float, float, pd.DatetimeIndex, pd.DatetimeIndex, pd.DataFrame]:
+    """Creates a 15min averaged dataframe of all annual L2B concatenated
 
     Args:
-        list_files (List,): _description_
-        str (_type_): _description_
-        pd (_type_): _description_
-        pd (_type_): _description_
-        pd (_type_): _description_
+        list_files (List,): list of input files
 
     Returns:
-        _type_: _description_
+        float : latitude
+        float : longitude
+        pd.DatetimeIndex : first date of the dataframe
+        pd.DatetimeIndex : last date of the dataframe
+        pd.DataFrame : averaged dataframe
     """
     with xr.open_mfdataset(list_files) as ds:
         df = ds.to_dataframe()
@@ -104,36 +104,43 @@ def average_dataframe(
 @click.command()
 # name of the instrument's site
 @click.argument(
-    "site_name", nargs=1,
+    "site_name",
+    nargs=1,
 )
 # Path of the Release files
 @click.argument(
-    "path_all_years", nargs=1,
+    "path_all_years",
+    nargs=1,
 )
 # Month of the json files
 @click.argument(
-    "month", nargs=1,
+    "month",
+    nargs=1,
 )
 # Output directory
 @click.argument(
-    "site_o", nargs=1,
+    "site_o",
+    nargs=1,
 )
 # instrument's type
 @click.argument(
-    "inst", nargs=1,
+    "inst",
+    nargs=1,
 )
 # Instrument id
 @click.argument(
-    "inst_id", nargs=1,
+    "inst_id",
+    nargs=1,
 )
 # Version of the Release
 @click.argument(
-    "vl2b", nargs=1,
+    "vl2b",
+    nargs=1,
 )
 
-#################################################################################################################################
-#############################################MAIN################################################################################
-#################################################################################################################################
+######################################################################
+############################### MAIN #################################
+######################################################################
 
 
 def main(
@@ -145,23 +152,23 @@ def main(
     inst_id: str,
     vl2b: str,
 ) -> None:
-    """_summary_
+    """Creates the figure of climatological MLH
 
     Args:
         site_name (str): Instrument's site name
         path_all_years (str): Path of the L2B concatenated files
         month (str): Chosen month to create the json files
         site_o (str): Output path for the json files
-        inst (Path): Instrument's name 
-        inst_id (Path): Instrument id's name 
-        VL2B (Path): Version of the L2B files 
+        inst (Path): Instrument's name
+        inst_id (Path): Instrument id's name
+        VL2B (Path): Version of the L2B files
 
     Returns:
         _type_: _description_
     """
     # List all th concatenated L2B files
     list_concat_L2B = list_files(path_all_years, ["STRATFINDER", "1min"])
-    # Get an averaging dataframe
+    # Get an averaged dataframe
     lat, lon, start_date, end_date, ave_df = average_dataframe(list_concat_L2B)
     ## TIME RELATIVE TO SUNRISE DEFINITION
     sun = SolarTime()
@@ -293,14 +300,10 @@ def main(
     else:
         outfile = f"eprofile_cycle_STRATFINDER_{site_name}_{inst}_{inst_id}_{vl2b}_{month}.json"
     # json file loacation
-    uid = pwd.getpwnam("eprofile").pw_uid
-    gid = grp.getgrnam("eprofile").gr_gid
     output = f"{site_o}/{outfile}"
     print(f"output written : {output}")
     with open(f"{output}", "w") as f:
         json.dump(data, f)
-    os.chmod(output, 0o644)
-    os.chown(output, uid, gid)
 
     return 0
 

@@ -18,7 +18,11 @@ from solartime import SolarTime
 
 __version__ = "1.0.0"
 __author__ = "Melania Van Hove"
-## ARGUMENTS : L2A,  L2B, SITE, FICHIER DE SORTIE QL
+
+
+## -----------------------------------------------DESCRIPTION----------------------------------------------
+## Script creating the figure showing the flaggued MLH at day D (L2B) over the original MLH (L2A)
+## --------------------------------------------------------------------------------------------------------
 
 
 @click.command()
@@ -47,12 +51,14 @@ __author__ = "Melania Van Hove"
     ),
 )
 def main(l2a: Path, l2b: Path, output: Path) -> None:
-    """
+    """Creates the figure showing the flaggued MLH at day D
 
     Args:
         l2a (click.argument): L2A file of the d day
         l2b (click.argument): L2B file of the d day
         output (click.argument): Output of the quicklooks files
+    Returns:
+        figure : figure of the flaggued MLH
     """
     # Check if the file
     click.echo(click.format_filename(l2a))
@@ -68,7 +74,6 @@ def main(l2a: Path, l2b: Path, output: Path) -> None:
         ## PLOT
 
         if (isFile1 == True) & (isFile2 == True):
-
             plt.figure(figsize=(20, 10))
             ax = plt.gca()
             df1 = dsa.to_dataframe()
@@ -87,8 +92,6 @@ def main(l2a: Path, l2b: Path, output: Path) -> None:
             sr = schedule["sunrise"]
 
             x = df2.index.to_list()
-            y = df1.MLH
-            y2 = df2.MLH
 
             df1["MLH"].plot(
                 x_compat=True,
@@ -128,9 +131,7 @@ def main(l2a: Path, l2b: Path, output: Path) -> None:
                 fontsize=20,
                 y=1.1,
             )
-            # print('x[0] = ', x[0], 'SR =', sr)
             plt.fill_betweenx([0, 4000], x[0], sr, alpha=0.1, color="skyblue")
-            # print('x = ', x, ' x[len(x)-1] = ',  x[len(x)-1], 'SS =', ss)
             plt.fill_betweenx([0, 4000], ss, x[len(x) - 1], alpha=0.1, color="skyblue")
 
             plt.ylim([0, 4000])
@@ -141,15 +142,11 @@ def main(l2a: Path, l2b: Path, output: Path) -> None:
                 facecolor="ghostwhite",
                 ncol=2,
                 borderaxespad=4.0,
-            )  # , bbox_to_anchor=(-0.0, 1.16, 1.10, .102) )
+            )
 
             plt.tight_layout()
             plt.grid()
             plt.savefig(output)
-            uid = pwd.getpwnam("eprofile").pw_uid
-            gid = grp.getgrnam("eprofile").gr_gid
-            os.chmod(output, 0o644)
-            os.chown(output, uid, gid)
 
         else:
             print("error with the files")
