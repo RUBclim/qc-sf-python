@@ -237,10 +237,8 @@ def main(
 
     ## MEDIAN VALUES
 
-    if site_name == "palaiseau":
-        lim = 100  # int(len(ave_df)/1500)
-    else:
-        lim = 0
+    lim = int(len(ave_df) / 1000)
+
 
     df_final = (
         ave_df[ave_df.index.month == int(month)]
