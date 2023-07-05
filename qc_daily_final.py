@@ -866,6 +866,8 @@ def Get_gloabal_attrs(ds: xr.Dataset, config_meta: Dict, dir_path: str) -> xr.Da
     Global_attrs = config_meta["Global_attributes"]
     dict_attrs = ds.attrs
     ds.attrs = Global_attrs
+    ds.attrs["contributor_name"] = dict_attrs["institution"] + ", "+ Global_attrs["contributor_name"]
+    ds.attrs["contributor_role"] = dict_attrs["institution"] +" operate the Lidar measurements, "+ Global_attrs["contributor_role"]
     ds.attrs["site_location"] = dict_attrs["site_location"]
     ds.attrs["instrument_id"] = dict_attrs["instrument_id"]
     ds.attrs["instrument_type"] = dict_attrs["instrument_type"]
