@@ -73,9 +73,9 @@ def main(l2a: Path, l2b: Path, output: Path) -> None:
         plt.figure(figsize=(20, 10))
         ax = plt.gca()
         df1 = dsa.to_dataframe()
-        df1 = df1.reset_index(level=0, drop=True)
+        df1 = df1.reset_index(level=1, drop=True)
         df2 = dsb.to_dataframe()
-        df2 = df2.reset_index(level=0, drop=True)
+        df2 = df2.reset_index(level=1, drop=True)
         lat = df1.station_latitude[0]
         lon = df1.station_longitude[0]
         sun = SolarTime()
