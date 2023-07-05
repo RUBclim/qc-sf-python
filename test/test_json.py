@@ -16,7 +16,7 @@ def test_run_json()->None:
     """
 
     site="falkenberg" 
-    input="/bdd/E-PROFILE/RELEASE/falkenberg" 
+    input="/bdd/E-PROFILE/L2B_CONCAT/falkenberg" 
     month="2" 
     inst="chm15k" 
     inst_id="0" 

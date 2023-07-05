@@ -66,7 +66,7 @@ def average_dataframe(
     """
     with xr.open_mfdataset(list_files) as ds:
         df = ds.to_dataframe()
-        df.reset_index(drop=True, level=0, inplace=True)
+        df.reset_index(drop=True, level=1, inplace=True)
         df = df[df.index.duplicated() == False]
         lat, lon = df["station_latitude"][0], df["station_longitude"][0]
 
