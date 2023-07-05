@@ -473,11 +473,13 @@ def create_df3day(day_1a: Path, day_2a: Path, day_3a: Path) -> pd.DataFrame:
     ############### DATAFRAME PREPARED FOR THE END ####################
 
     df_day_2 = clean_time_array(xr.open_dataset(day_2a)).to_dataframe()
-    df_day_2 = df_day_2.reset_index(level=0, drop=True)
-
+    print(df_day_2)
+    df_day_2 = df_day_2.reset_index(level=1, drop=True)
+    print(df_day_2)
     ############### AVERAGE 15 MIN ################
-
+    
     df2 = df_day_2.resample("15min").mean()
+    print(df2)
     df2 = df2[df2.index.date == df2.index.date[0]]
     df2.index = pd.to_datetime(df2.index.values) + timedelta(minutes=15)
     df2.index = df2.index.set_names(["time"])
@@ -493,7 +495,8 @@ def create_df3day(day_1a: Path, day_2a: Path, day_3a: Path) -> pd.DataFrame:
 
     if isFile1 == True:
         df1 = clean_time_array(xr.open_dataset(day_1a)).to_dataframe()
-        df1 = df1.reset_index(level=0, drop=True)
+        df1 = df1.reset_index(level=1, drop=True)
+        print(type(df1.index.date[0]))
         df1 = df1[df1.index.date == df1.index.date[0]]
         df1 = df1.resample("15min").mean()
         df1.index = pd.to_datetime(df1.index.values) + timedelta(minutes=15)
@@ -504,7 +507,7 @@ def create_df3day(day_1a: Path, day_2a: Path, day_3a: Path) -> pd.DataFrame:
 
     if isFile3 == True:
         df3 = clean_time_array(xr.open_dataset(day_3a)).to_dataframe()
-        df3 = df3.reset_index(level=0, drop=True)
+        df3 = df3.reset_index(level=1, drop=True)
         df3 = df3.resample("15min").mean()
         df3.index = pd.to_datetime(df3.index.values) + timedelta(minutes=15)
         df3.index = df3.index.set_names(["time"])
@@ -1031,16 +1034,14 @@ def main(
         lon = ds["station_longitude"][0].values
         ds = clean_time_array(ds)
         df_day_2 = ds.to_dataframe()
-        df_day_2 = df_day_2.reset_index(level=0, drop=True)
+        df_day_2 = df_day_2.reset_index(level=1, drop=True)
         df_day_2 = df_day_2[~df_day_2.index.duplicated(keep="first")]
         df_day_2 = df_day_2.loc[df_day_2.index.dropna()]
-
         day_today = conv_np64dt_to_dt(ds["time"][0].values)
         day0 = day_today - timedelta(days=2)
         day1 = (day_today - timedelta(days=1)).isoformat()[0:10]
         day2 = day_today.isoformat()[0:10]
         day3 = (day_today + timedelta(days=1)).isoformat()[0:10]
-        day4 = (day_today + timedelta(days=2)).isoformat()[0:10]
 
         print(
             "Site = ",
