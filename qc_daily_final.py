@@ -67,7 +67,6 @@ def add_to_dict(dict_json: Dict, dict_nc: Dict, list_filt: List) -> Dict:
 
 
 def get_maxmlh(json_file: str) -> str:
-
     """Extract the maxmlh from the json configuration file
 
     Args:
@@ -188,7 +187,7 @@ def stuck_mlh(
         threshold_fraction_mlh (float): float fraction of the total MLH to consider it stucked
 
     Returns:
-        dataframe: flaggued dataframe
+        pd.dataframe: flaggued dataframe
 
     Comments :
         occurs if morning growth is not detected by STRATFinder
@@ -414,7 +413,7 @@ def cold_day_dec(
         winter_mlh (float) : float MLH after decrease if real one is too low and might remove too much data
 
     Returns:
-        datframe: flaggued dataframe
+        pd.datframe: flaggued dataframe
     """
     d = df.day == 2
     mov_sum = df["diff"].rolling(time_steps_to_define_rolling_diff).sum()
@@ -474,11 +473,13 @@ def create_df3day(day_1a: Path, day_2a: Path, day_3a: Path) -> pd.DataFrame:
     ############### DATAFRAME PREPARED FOR THE END ####################
 
     df_day_2 = clean_time_array(xr.open_dataset(day_2a)).to_dataframe()
-    df_day_2 = df_day_2.reset_index(level=0, drop=True)
-
+    print(df_day_2)
+    df_day_2 = df_day_2.reset_index(level=1, drop=True)
+    print(df_day_2)
     ############### AVERAGE 15 MIN ################
-
+    
     df2 = df_day_2.resample("15min").mean()
+    print(df2)
     df2 = df2[df2.index.date == df2.index.date[0]]
     df2.index = pd.to_datetime(df2.index.values) + timedelta(minutes=15)
     df2.index = df2.index.set_names(["time"])
@@ -494,7 +495,8 @@ def create_df3day(day_1a: Path, day_2a: Path, day_3a: Path) -> pd.DataFrame:
 
     if isFile1 == True:
         df1 = clean_time_array(xr.open_dataset(day_1a)).to_dataframe()
-        df1 = df1.reset_index(level=0, drop=True)
+        df1 = df1.reset_index(level=1, drop=True)
+        print(type(df1.index.date[0]))
         df1 = df1[df1.index.date == df1.index.date[0]]
         df1 = df1.resample("15min").mean()
         df1.index = pd.to_datetime(df1.index.values) + timedelta(minutes=15)
@@ -505,7 +507,7 @@ def create_df3day(day_1a: Path, day_2a: Path, day_3a: Path) -> pd.DataFrame:
 
     if isFile3 == True:
         df3 = clean_time_array(xr.open_dataset(day_3a)).to_dataframe()
-        df3 = df3.reset_index(level=0, drop=True)
+        df3 = df3.reset_index(level=1, drop=True)
         df3 = df3.resample("15min").mean()
         df3.index = pd.to_datetime(df3.index.values) + timedelta(minutes=15)
         df3.index = df3.index.set_names(["time"])
@@ -850,7 +852,6 @@ def Transform_list_type(list_to_trans: list, type_to: str) -> list:
 
 
 def Get_gloabal_attrs(ds: xr.Dataset, config_meta: Dict, dir_path: str) -> xr.Dataset:
-
     """Add the global attributes contains into the toml configuration file
     into the
 
@@ -865,6 +866,8 @@ def Get_gloabal_attrs(ds: xr.Dataset, config_meta: Dict, dir_path: str) -> xr.Da
     Global_attrs = config_meta["Global_attributes"]
     dict_attrs = ds.attrs
     ds.attrs = Global_attrs
+    ds.attrs["contributor_name"] = dict_attrs["institution"] + ", "+ Global_attrs["contributor_name"]
+    ds.attrs["contributor_role"] = dict_attrs["institution"] +" operate the Lidar measurements, "+ Global_attrs["contributor_role"]
     ds.attrs["site_location"] = dict_attrs["site_location"]
     ds.attrs["instrument_id"] = dict_attrs["instrument_id"]
     ds.attrs["instrument_type"] = dict_attrs["instrument_type"]
@@ -891,9 +894,7 @@ def Get_gloabal_attrs(ds: xr.Dataset, config_meta: Dict, dir_path: str) -> xr.Da
     ds.attrs["geospatial_lon_max"] = np.float64(ds.attrs["geospatial_lon_max"])
     inst = dict_attrs["instrument_type"].lower()
     city = dict_attrs["site_location"].lower()
-    ds.attrs[
-        "title"
-    ] = f"STRATfinder applied on {inst}; quality controlled; {city}"
+    ds.attrs["title"] = f"STRATfinder applied on {inst}; quality controlled; {city}"
     return ds
 
 
@@ -1004,7 +1005,6 @@ def main(
     config_attributes_file: click.Path,
     output_day2a: click.Path,
 ) -> None:
-
     ## CHECK IF FILES
     click.echo(click.format_filename(day_1a))
     click.echo(click.format_filename(day_2a))
@@ -1036,16 +1036,14 @@ def main(
         lon = ds["station_longitude"][0].values
         ds = clean_time_array(ds)
         df_day_2 = ds.to_dataframe()
-        df_day_2 = df_day_2.reset_index(level=0, drop=True)
+        df_day_2 = df_day_2.reset_index(level=1, drop=True)
         df_day_2 = df_day_2[~df_day_2.index.duplicated(keep="first")]
         df_day_2 = df_day_2.loc[df_day_2.index.dropna()]
-
         day_today = conv_np64dt_to_dt(ds["time"][0].values)
         day0 = day_today - timedelta(days=2)
         day1 = (day_today - timedelta(days=1)).isoformat()[0:10]
         day2 = day_today.isoformat()[0:10]
         day3 = (day_today + timedelta(days=1)).isoformat()[0:10]
-        day4 = (day_today + timedelta(days=2)).isoformat()[0:10]
 
         print(
             "Site = ",
