@@ -2,19 +2,22 @@
 
 import os
 import sys
-
-from matplotlib import figure
-from datetime import date
 import click
+import grp
+import pwd
+
 import xarray as xr
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
-import grp
-import pwd
+import pandas as pd
+
+from matplotlib import figure
+from datetime import date
 from typing import Tuple, List
 from pathlib import Path
 
-from solartime import SolarTime
+#from solartime import SolarTime
+from pvlib.location import Location
 
 __version__ = "1.0.0"
 __author__ = "Melania Van Hove"
@@ -78,12 +81,20 @@ def main(l2a: Path, l2b: Path, output: Path) -> None:
         df2 = df2.reset_index(level=1, drop=True)
         lat = df1.station_latitude[0]
         lon = df1.station_longitude[0]
-        sun = SolarTime()
+        #sun = SolarTime()
 
+        location = Location(lat, lon, tz='UTC')
         date_ = date(
             int(df1.index.year[0]), int(df1.index.month[0]), int(df1.index.day[0])
         )
-        schedule = sun.sun_utc(date_, lat, lon)
+        date_range = pd.date_range(start=date_, periods=1, freq='D')
+
+        df_test = pd.DataFrame(index=date_range)
+        #schedule = sun.sun_utc(date_, lat, lon)
+        # Calcul des heures de lever, coucher et transit du soleil
+        sun_times = location.get_sun_rise_set_transit(df_test.index.tz_localize('UTC'))
+        schedule = {'sunrise':pd.Timestamp(sun_times["sunrise"].values[0]), 'sunset':pd.Timestamp(sun_times["sunset"].values[0])}
+
         ss = schedule["sunset"]
         sr = schedule["sunrise"]
 
