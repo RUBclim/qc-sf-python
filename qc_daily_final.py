@@ -238,15 +238,17 @@ def stuck_mlh(
     if (rap1 > threshold_fraction_mlh) | (
         (max_morn > threshold_day) & (rap2 > threshold_fraction_mlh)
     ):
+        print("relative STUCK MLH")
         min_mlh = df["MLH"][(df.time_relSR > 5) & d].min()
         day = (df.time_relSR > 5) | (df.time_relSS < 3)
         real_day = df.index.day[100]
-        df.FLAG_QC[(df.MLH < min_mlh + 100) & day & (df.index.day == real_day)] = df.FLAG_QC[(df.MLH < min_mlh + 100) & day & (df.index.day == real_day)] + 10
+        df.FLAG_QC[(df.MLH < min_mlh + 300) & day & (df.index.day == real_day)] = df.FLAG_QC[(df.MLH < min_mlh + 300) & day & (df.index.day == real_day)] + 10
 
 
     # absolute stuck MLH
 
     if (df["diff"][(df.time_relSR > 4) & (df.time_relSS < -2) & d & (df.MLH < 300)] == 0).sum() > 4:
+        print("absolute STUCK MLH")
         indices = df["diff"][(df["diff"] == 0) & (df.time_relSR > 0) & (df.time_relSS < -2) & d & (df.MLH < 300)].index.to_list()
         ind1 = indices[0] - timedelta(minutes=120)
         ind2 = indices[-1] + timedelta(minutes=120)
