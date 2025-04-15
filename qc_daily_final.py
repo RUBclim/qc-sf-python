@@ -574,6 +574,50 @@ def rel_residual_layer(df: pd.DataFrame, frac_max: float) -> pd.DataFrame:
     return df
 
 
+def overestimation(df: pd.DataFrame) -> pd.DataFrame:
+
+    print("OVERESTIMATION FUNCTION STARTS ------ ")
+    d2 = df.day == 2
+    df["diff_MLH_ABLH"] = df.ABLH - df.MLH
+
+    #mov_diff = df["diff"].rolling(2).sum()
+    #cond_inc = (mov_diff > 2000)
+    #cond_dec = (mov_diff < -2000)
+
+    max_yesterday = df["MLH"][(df.day == 1) & (df.time_relSR > 0)].max()
+    max_today = df["MLH"][(df.day == 2) & (df.time_relSR > 0)].max()
+    cond_max = (max_today - max_yesterday > 1000)
+    print("cond_max = ", cond_max)
+
+    df2 = df[(df.time_relSR > 0) & d2 & (df.MLH > 2300) & (df.MLH <= 3000)]
+
+    # Création d'une série booléenne
+    is_zero = df2["diff_MLH_ABLH"] == 0
+
+    # Trouver les groupes consécutifs
+    group_id = (is_zero != is_zero.shift()).cumsum()  # identifie les groupes changés
+    group_sizes = is_zero.groupby(group_id).transform('sum')  # taille du groupe
+
+    # Masque pour les séquences de zéros consécutifs > 8
+    long_zero_sequences = is_zero & (group_sizes >= 6)
+
+    # Extraire les indices ou les valeurs concernées
+    indices_consecutifs = df2.index[long_zero_sequences]
+    print(indices_consecutifs)
+
+    if (len(indices_consecutifs) > 0) & cond_max :
+
+        #if df[96:192][(df.index <= indices_consecutifs[0]) & cond_inc]["diff"].any() | df[96:192][(df.index >= indices_consecutifs[0]) & cond_dec]["diff"].any() : 
+
+        print("FLAG SHOULD BE CHANGED NOW ")
+
+        df.loc[indices_consecutifs, "FLAG_QC"] += 100
+
+        print(df[indices_consecutifs[0]:indices_consecutifs[-1]]["FLAG_QC"])
+
+    return df
+
+
 def get_encoding(ds: xr.Dataset) -> Dict:
     """[get the encoding dictionary ]
 
@@ -950,7 +994,7 @@ def main(
         df.insert(5, "FLAG_QC", 0)
 
        
-       
+        print("DF.COLUMNS = ", df.columns) 
        
         ######## FILTERS #########
 
@@ -999,7 +1043,7 @@ def main(
 
         # differences between consecutive mlh (taking NaN into account)
         df["diff"] = df["MLH"].diff()
-        idx = df[np.isnan(df["diff"]) == True].index.to_list()
+        idx = df[np.isnan(df["diff"])].index.to_list()
         for i in idx:
             idx2 = df[df.index < i].MLH.last_valid_index()
             if idx2 is not None:
@@ -1021,6 +1065,8 @@ def main(
         print("filter Stuck MLH done")
 
 
+        ## REMOVE OVERSESTIMATIONS
+
         if warm:
             df = day_peaks(
                 df,
@@ -1038,6 +1084,12 @@ def main(
                 "cold",
             )  
 
+
+        if ~warm | (month2 == 4):
+
+            print("OVERESTIMATION FUNCTION ")
+            df = overestimation(df)
+            #print(indices_consecutifs)
 
         print("filter Massive Increase/decrease at day done")
 
