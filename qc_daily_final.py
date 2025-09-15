@@ -243,20 +243,67 @@ def stuck_mlh(
         day = (df.time_relSR > 5) | (df.time_relSS < 3)
         real_day = df.index.day[100]
         df.FLAG_QC[(df.MLH < min_mlh + 300) & day & (df.index.day == real_day)] = df.FLAG_QC[(df.MLH < min_mlh + 300) & day & (df.index.day == real_day)] + 10
-
-
-    # absolute stuck MLH
-
-    if (df["diff"][(df.time_relSR > 4) & (df.time_relSS < -2) & d & (df.MLH < 300)] == 0).sum() > 4:
-        print("absolute STUCK MLH")
-        indices = df["diff"][(df["diff"] == 0) & (df.time_relSR > 0) & (df.time_relSS < -2) & d & (df.MLH < 300)].index.to_list()
-        ind1 = indices[0] - timedelta(minutes=120)
-        ind2 = indices[-1] + timedelta(minutes=120)
-        df.FLAG_QC[ind1:ind2] = df.FLAG_QC[ind1:ind2] + 10 
-        
       
     return df
 
+
+def absolute_stuck_mlh (
+    df: pd.DataFrame)-> pd.DataFrame:
+    
+    """remove stuck ;
+        conditions to remove the day :
+        if more than 1h of MLH is stuck at the same value
+
+    Args:
+        df (dataframe): dataframe
+
+    Returns:
+        pd.dataframe: flaggued dataframe
+
+    Comments :
+        occurs by night mostly if no NL is detected and/or is lower than low limit
+    """
+    
+    # Identifier les zones où diff = 0
+    is_constant = (df['diff'] == 0)
+    print(is_constant)
+    
+    # Créer des groupes pour les séquences consécutives
+    group_changes = (is_constant != is_constant.shift()).cumsum()
+    print(group_changes)
+    
+    # Identifier les groupes qui correspondent à des séquences constantes ≥ min_duration_steps
+    group_sizes = df.groupby(group_changes).size()
+    valid_groups = group_sizes[
+        (group_sizes >= 4) & 
+        (df.groupby(group_changes)['diff'].first() == 0)
+    ].index
+    
+    # Marquer flag=1 pour tous les timestamps de ces groupes valides
+    df.loc[group_changes.isin(valid_groups), 'FLAG_QC'] = 10
+    print(df[df["FLAG_QC"] == 10])
+    
+
+    # indices où FLAG_QC == 10
+    idx_flagged = df.index[df['FLAG_QC'] == 10]
+
+    # construire avant/après en décalant
+    idx_before = idx_flagged - 2*pd.Timedelta(df.index.freq)   # un pas avant
+    idx_after  = idx_flagged + 2*pd.Timedelta(df.index.freq)   # un pas après
+
+    # concaténer
+    idx_extended = idx_flagged.union(idx_before).union(idx_after)
+
+    # appliquer le flag
+    df.loc[df.index.intersection(idx_extended), 'FLAG_QC'] = 10
+
+    print(df[df["FLAG_QC"]==10]["MLH"])
+    #print(df[df["FLAG_QC"]==10])
+
+    # Statistiques
+    #flagged_periods = df[df['FLAG_QC'] == 10
+
+    return df
 
 def massive_inc_night(
     df: pd.DataFrame, thresh: float, time_thresh: int, nl_mlh: float
@@ -304,7 +351,8 @@ def massive_inc_night(
 
     ind = pd.unique(ind)
     ind = df["FLAG_QC"][ind][df.FLAG_QC == 0].index.to_list()
-    df["FLAG_QC"][ind] = df["FLAG_QC"][ind] + 100
+    #df["FLAG_QC"][ind] = df["FLAG_QC"][ind] + 100
+    df.loc[ind, "FLAG_QC"] = 100
     return df
 
 
@@ -348,7 +396,8 @@ def massive_dec_night(
 
     ind = pd.unique(ind)
     ind = df["FLAG_QC"][ind][df.FLAG_QC == 0].index.to_list()
-    df["FLAG_QC"][ind] = df["FLAG_QC"][ind] + 100
+    #df["FLAG_QC"][ind] = df["FLAG_QC"][ind] + 100
+    df.loc[ind, "FLAG_QC"] = 100
 
     return df
 
@@ -394,7 +443,8 @@ def day_peaks(
         
     ind = pd.unique(ind)
     ind = df["FLAG_QC"][ind][df.FLAG_QC == 0].index.to_list()
-    df.FLAG_QC[ind] = df.FLAG_QC[ind] + 100
+    #df.FLAG_QC[ind] = df.FLAG_QC[ind] + 100
+    df.loc[ind, "FLAG_QC"] = 100
 
     return df
 
@@ -439,7 +489,7 @@ def create_df3day(day_1a: Path, day_2a: Path, day_3a: Path) -> pd.DataFrame:
     df_id.index.names = ["time"]
     df_id.drop(index=df_id.index[0], axis=0, inplace=True)
 
-    if isFile1 == True:
+    if isFile1:
         df1 = clean_time_array(xr.open_dataset(day_1a)).to_dataframe()
         df1 = df1.reset_index(level=1, drop=True)
         df1 = df1[df1.index.date == df1.index.date[0]]
@@ -451,7 +501,7 @@ def create_df3day(day_1a: Path, day_2a: Path, day_3a: Path) -> pd.DataFrame:
         df1 = None
         print(f"{day_1a} n'existe pas et est remplacé par un dataframe vide")
 
-    if isFile3 == True:
+    if isFile3:
         df3 = clean_time_array(xr.open_dataset(day_3a)).to_dataframe()
         df3 = df3.reset_index(level=1, drop=True)
         df3 = df3.drop(columns=['platform_id', 'station_name'])
@@ -1016,7 +1066,8 @@ def main(
             idx2 = df[df.index < i].MLH.last_valid_index()
             if idx2 is not None:
                 if (i - idx2) < timedelta(hours=9):
-                    df["diff"][i] = df.MLH[i] - df.MLH[idx2]
+                    #df["diff"][i] = df.MLH[i] - df.MLH[idx2]
+                    df.loc[i, "diff"]= df.MLH[i] - df.MLH[idx2]
 
 
 
@@ -1049,7 +1100,8 @@ def main(
             if idx2 is not None:
                 #if (i - idx2) <= timedelta(minutes=120):
                 if (i - idx2) <= timedelta(minutes=240):
-                    df["diff"][i] = df.MLH[i] - df.MLH[idx2]
+                    #df["diff"][i] = df.MLH[i] - df.MLH[idx2]
+                    df.loc[i, "diff"]= df.MLH[i] - df.MLH[idx2]
 
 
         ## REMOVE STUCK MLH AT DAY/WARM SEASONS
@@ -1061,6 +1113,7 @@ def main(
                 values_qc["stuck_mlh"]["threshold_afternoon"],
                 values_qc["stuck_mlh"]["threshold_fraction_mlh"],
             )
+        df = absolute_stuck_mlh (df)
     
         print("filter Stuck MLH done")
 
@@ -1085,10 +1138,10 @@ def main(
             )  
 
 
-        if ~warm | (month2 == 4):
+        #if ~warm | (month2 == 4):
 
-            print("OVERESTIMATION FUNCTION ")
-            df = overestimation(df)
+        #    print("OVERESTIMATION FUNCTION ")
+        #    df = overestimation(df)
             #print(indices_consecutifs)
 
         print("filter Massive Increase/decrease at day done")
