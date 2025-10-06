@@ -247,7 +247,7 @@ def absolute_stuck_mlh (
     
     """remove stuck ;
         conditions to remove the day :
-        if more than 1h of MLH is stuck at the same value
+        if more than 2.5h of MLH is stuck at the same value
 
     Args:
         df (dataframe): dataframe
@@ -270,9 +270,9 @@ def absolute_stuck_mlh (
     # Identifier les groupes qui correspondent à des séquences constantes ≥ min_duration_steps
     group_sizes = df.groupby(group_changes).size()
     valid_groups = group_sizes[
-        (group_sizes >= 4) & 
+        (group_sizes >= 10) & 
         (df.groupby(group_changes)['diff'].first() == 0)
-    ].index
+    ].index  # 10 = 2.5 hours 
     
     # Marquer flag=1 pour tous les timestamps de ces groupes valides
     df.loc[group_changes.isin(valid_groups), 'FLAG_QC'] = 10
@@ -293,10 +293,6 @@ def absolute_stuck_mlh (
     df.loc[df.index.intersection(idx_extended), 'FLAG_QC'] = 10
 
     print(df[df["FLAG_QC"]==10]["MLH"])
-    #print(df[df["FLAG_QC"]==10])
-
-    # Statistiques
-    #flagged_periods = df[df['FLAG_QC'] == 10
 
     return df
 
