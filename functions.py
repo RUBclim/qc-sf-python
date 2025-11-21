@@ -839,15 +839,24 @@ def Get_gloabal_attrs(ds: xr.Dataset, config_meta: Dict, dir_path: str) -> xr.Da
     ds.attrs["geospatial_lat_max"] = ds["station_latitude"].values[0]
     ds.attrs["geospatial_lon_min"] = ds["station_longitude"].values[0]
     ds.attrs["geospatial_lon_max"] = ds["station_longitude"].values[0]
-    repo_qc = git.Repo(f"{dir_path}")
-    sha_qc = repo_qc.head.commit.hexsha[0:6]
-    ds.attrs[
-        "source"
-    ] = f"Automatic Lidar Ceilometer (ALC); Quality control version : {sha_qc}"
     ds.attrs["geospatial_lat_min"] = np.float64(ds.attrs["geospatial_lat_min"])
     ds.attrs["geospatial_lat_max"] = np.float64(ds.attrs["geospatial_lat_max"])
     ds.attrs["geospatial_lon_min"] = np.float64(ds.attrs["geospatial_lon_min"])
     ds.attrs["geospatial_lon_max"] = np.float64(ds.attrs["geospatial_lon_max"])
+
+    # write product version
+    r = subprocess.check_output(['git', '-C', dir_path, 'describe', '--tags', '--always'],text=True).strip()
+    ds.attrs["product_version"] = f"Quality control version : {r}"
+
+    STRATfinder_version = dict_attrs["history"][104:111]  # pour avoir la version de STRATfinder qui est sous la forme : v2025.09-5-g1a2b3c4
+    quality_control_version = r[:7]
+    product_version = max(datetime.strptime(STRATfinder_version, "%Y.%m"), datetime.strptime(quality_control_version, "%Y.%m"))
+    product_version = product_version.strftime("%Y-%m")
+    ds.attrs["product_version"] = product_version
+    ds.attrs["source"] = f"Automatic Lidar Ceilometer (ALC); STRATFINDER vesion : {STRATfinder_version} ; Quality control version : {quality_control_version}"
+    # end product versions
+
+
     inst = dict_attrs["instrument_type"].lower()
     city = dict_attrs["site_location"].lower()
     ds.attrs["title"] = f"STRATfinder applied on {inst}; quality controlled; {city}"

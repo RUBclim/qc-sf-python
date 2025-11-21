@@ -1,11 +1,8 @@
 [Global_attributes]
 site_location = ""
- title = "STRATfinder applied to  and quality control applied"
 summary = "Automatic Lidar Ceilometers (ALC) are gathering valuable data that allow for the Atmospheric Boundary Layer Height (ABLH) and Mixed Layer Height (MLH) to be derived in near real time. A new generation of advanced methods to automatically detect the ABL heights now exist. Here, the advanced algorithm STRATfinder is applied to high signal-to-noise ratio (SNR) ALC (CHM15k or CL61) observations, to derive both ABLH and MLH. (Kotthaus et al. (2020), Remote Sens.)"
 references = "Kotthaus et al. 2020, RS"
-source = "Automatic Lidar Ceilometer (ALC); STRATFINDER vesion :    ; Quality control version :    "
-history = "L2B : file level after quality control applied on the L2A (data derived from STRATfinder)"
-product_version = "1"
+history = "L2B : product level after quality control applied on the L2A product (derived from the algorithm STRATfinder)"
 metadata_link = ""
 id = ""
 institution = "AERIS-ESPRI, LMD-IPSL"
