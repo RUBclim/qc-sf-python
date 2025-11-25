@@ -8,6 +8,8 @@ import git
 import pwd
 import grp
 import toml
+import subprocess
+
 from datetime import date, timedelta, time, datetime
 
 import xarray as xr
@@ -846,14 +848,14 @@ def Get_gloabal_attrs(ds: xr.Dataset, config_meta: Dict, dir_path: str) -> xr.Da
 
     # write product version
     r = subprocess.check_output(['git', '-C', dir_path, 'describe', '--tags', '--always'],text=True).strip()
-    ds.attrs["product_version"] = f"Quality control version : {r}"
-
-    STRATfinder_version = dict_attrs["history"][104:111]  # pour avoir la version de STRATfinder qui est sous la forme : v2025.09-5-g1a2b3c4
     quality_control_version = r[:7]
+    
+    STRATfinder_version = dict_attrs["history"][104:111]  # pour avoir la version de STRATfinder qui est sous la forme : v2025.09-5-g1a2b3c4
+    
     product_version = max(datetime.strptime(STRATfinder_version, "%Y.%m"), datetime.strptime(quality_control_version, "%Y.%m"))
-    product_version = product_version.strftime("%Y-%m")
-    ds.attrs["product_version"] = product_version
-    ds.attrs["source"] = f"Automatic Lidar Ceilometer (ALC); STRATFINDER vesion : {STRATfinder_version} ; Quality control version : {quality_control_version}"
+    product_version = product_version.strftime("%Y.%m")
+    ds.attrs["product_version"] = f"v{product_version}"
+    ds.attrs["source"] = f"Automatic Lidar Ceilometer (ALC); STRATFINDER version : v{STRATfinder_version} ; Quality control version : v{quality_control_version}"
     # end product versions
 
 
