@@ -15,7 +15,7 @@ from pvlib.location import Location
 pd.options.mode.chained_assignment = None  ## Warning avoid : ' SettingWithCopyWarning '
 
 
-__version__ = "2025.09"
+__version__ = "2026.02"
 __author__ = "Melania Van Hove"
 
 
@@ -300,13 +300,6 @@ def main(
 
         ## REMOVE STUCK MLH AT DAY/WARM SEASONS
 
-        if (site != "LERWICK,UK") & warm:
-            df = stuck_mlh(
-                df,
-                values_qc["stuck_mlh"]["threshold_day"],
-                values_qc["stuck_mlh"]["threshold_afternoon"],
-                values_qc["stuck_mlh"]["threshold_fraction_mlh"],
-            )
         df = absolute_stuck_mlh (df)
     
         print("filter Stuck MLH done")
@@ -314,22 +307,14 @@ def main(
 
         ## REMOVE OVERSESTIMATIONS
 
-        if warm:
-            df = day_peaks(
-                df,
-                values_qc["day_peak"]["threshold_increase"] * 3,
-                values_qc["day_peak"]["time_range_to_detect_decrease"] + 120,
-                values_qc["day_peak"]["time_steps_to_define_rolling_diff"] - 2,
-                "warm", 
-            )
-        else:
-            df = day_peaks(
-                df,
-                values_qc["day_peak"]["threshold_increase"] * 3,
-                values_qc["day_peak"]["time_range_to_detect_decrease"] + 120,
-                values_qc["day_peak"]["time_steps_to_define_rolling_diff"] - 2,
-                "cold",
-            )  
+        df = day_peaks(
+            df,
+            values_qc["day_peak"]["threshold_increase"] * 3,
+            values_qc["day_peak"]["time_range_to_detect_decrease"] + 120,
+            values_qc["day_peak"]["time_steps_to_define_rolling_diff"] - 2,
+            "warm", 
+        )
+
 
 
         #if ~warm | (month2 == 4):
@@ -359,37 +344,6 @@ def main(
 
         print("filter Extreme points done")
 
-        ## RESIDUAL LAYER
-
-        if warm:
-            df = residual_layer(
-                df,
-                values_qc["residual_layer"]["threshold_to_detect_mlh_warm"],
-                values_qc["residual_layer"]["fraction_considered_residual_mlh_warm"],
-                values_qc["residual_layer"]["threshold_to_remove_mlh_warm"],
-            )
-
-            df = rel_residual_layer(
-                df,
-                values_qc["rel_residual_layer"]["fraction_of_the_max_mlh_warm"],
-            )
-
-        else:
-            df = residual_layer(
-                df,
-                values_qc["residual_layer"]["threshold_to_detect_mlh_cold"],
-                values_qc["residual_layer"]["fraction_considered_residual_mlh_cold"],
-                values_qc["residual_layer"]["threshold_to_remove_mlh_cold"],
-            )
-
-            print("absolute residual layer filter done")
-
-            df = rel_residual_layer(
-                df,
-                values_qc["rel_residual_layer"]["fraction_of_the_max_mlh_cold"],
-            )
-
-            print("relative residual layer filter done")
 
 
         # TO BE UNCOMMENTED WHEN FUNCTION IS IMPROVED
@@ -397,12 +351,6 @@ def main(
         # SOME FIGURES OF TIME SERIES AT KARLOV CAN BE FOUND IN GIT REPO 
         # print("artifical noise starts...")
         # df = artificial_noise (df)
-
-        print("FINAL RESULTS : ")
-        print(df["FLAG_QC"][96:155])
-        print(df["FLAG_QC"][155:200])
-        print(df["MLH"][96:155])
-        print(df["MLH"][155:200])
 
         ######## END FILTERS #########
 

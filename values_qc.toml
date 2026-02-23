@@ -6,28 +6,6 @@ threshold_increase = 500
 time_range_to_detect_decrease = 180
 time_steps_to_define_rolling_diff = 4
 
-[cold_day_dec]
-threshold_decrease = -1500
-time_steps_to_define_rolling_diff = 2 
-winter_mlh = 500
-
-[stuck_mlh]
-threshold_day = 300
-threshold_afternoon = 500
-threshold_fraction_mlh = 0.5
-
-[residual_layer]
-threshold_to_detect_mlh_warm = 800
-fraction_considered_residual_mlh_warm = 0.75 
-threshold_to_remove_mlh_warm = 600
-threshold_to_detect_mlh_cold = 600
-fraction_considered_residual_mlh_cold = 0.5 
-threshold_to_remove_mlh_cold = 500
-
-[rel_residual_layer]
-fraction_of_the_max_mlh_warm = 1
-fraction_of_the_max_mlh_cold = 1.5
-
 [extreme]
 fraction_of_the_max_mlh_warm = 1
 fraction_of_the_max_mlh_cold = 1.5
@@ -41,15 +19,5 @@ night_mlh = 300
 threshold_increase = 250
 time_steps_to_define_rolling_diff = 1
 night_mlh = 300
-
-[dip_afternoon]
-threshold_increase_or_decrease = 1000
-time_steps_to_define_rolling_diff = 4
-
-[massive_inc_afternoon]
-threshold_increase_or_decrease = 500
-time_steps_to_define_rolling_diff = 2
-time_considered_before_sunset = 2 
-threshold_to_considered_stable_mlh = 200
 
 
