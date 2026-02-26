@@ -1,23 +1,13 @@
-[rain_filter]
-time_step_thresh = 12
-
-[day_peak]
-threshold_increase = 500
-time_range_to_detect_decrease = 180
-time_steps_to_define_rolling_diff = 4
-
 [extreme]
 fraction_of_the_max_mlh_warm = 1
-fraction_of_the_max_mlh_cold = 1.5
+fraction_of_the_max_mlh_cold = 0.75
 
 [massive_dec_night] 
-threshold_decrease = -200
+threshold_decrease = -250
 time_steps_to_define_rolling_diff = 2
-night_mlh = 300
 
 [massive_inc_night] 
 threshold_increase = 250
-time_steps_to_define_rolling_diff = 1
-night_mlh = 300
+time_steps_to_define_rolling_diff = 2
 
 

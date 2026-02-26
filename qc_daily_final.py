@@ -121,7 +121,7 @@ def main(
     with xr.open_dataset(day_2a) as ds:
         site = ds.attrs["site_location"]  ## site name given in L2A by E-PROFILE
         month2 = ds["time"].dt.month[0].values
-        warm = (month2 > 3) and (month2 < 10)
+        #warm = (month2 > 3) and (month2 < 10)
         #summer = (month2 > 5) and (month2 < 9)
         lat = ds["station_latitude"][0].values
         lon = ds["station_longitude"][0].values
@@ -153,7 +153,7 @@ def main(
 
         ## RENAME COLUMNS TO SIMPLIFY
 
-        df = df.rename(columns={"FLAG": "prof"})
+        df = df.rename(columns={"FLAG": "rain"})
         df = df.rename(columns={"cloud_base_altitude": "CBH"})
 
         ## TIME RELATIVE TO SUNRISE/SUNSET
@@ -166,14 +166,8 @@ def main(
         for i in range(
             5
         ):  ## 5 : because we need SR & SS at day J-2, J-1, J, J+1 et J+2
-
             date_range = pd.date_range(start=date_, periods=1, freq='D')
-
             df_test = pd.DataFrame(index=date_range)
-            
-            #dates = pd.to_datetime(date_).tz_localize('UTC')
-            #dates = pd.Series(dates)
-            #print(dates)
 
             # Calcul des heures de lever, coucher et transit du soleil
             sun_times = location.get_sun_rise_set_transit(df_test.index.tz_localize('UTC'))
@@ -244,7 +238,7 @@ def main(
 
         ## RAIN
 
-        df = rain_filter(df, values_qc["rain_filter"]["time_step_thresh"])
+        df = rain_filter(df)
 
         print("filter Rain done")
 
@@ -269,7 +263,6 @@ def main(
             df,
             values_qc["massive_inc_night"]["threshold_increase"],
             values_qc["massive_inc_night"]["time_steps_to_define_rolling_diff"],
-            values_qc["massive_inc_night"]["night_mlh"],
         )
 
         print("filter Massive increase done")
@@ -279,52 +272,15 @@ def main(
             df,
             values_qc["massive_dec_night"]["threshold_decrease"],
             values_qc["massive_dec_night"]["time_steps_to_define_rolling_diff"],
-            values_qc["massive_dec_night"]["night_mlh"],
         )
 
         print("filter Massive decrease done")
-
-        ## CHECK FOR MASSIVE INCREASE/DECREASE AT DAY IN 4H MAX
-
-        # differences between consecutive mlh (taking NaN into account)
-        df["diff"] = df["MLH"].diff()
-        idx = df[np.isnan(df["diff"])].index.to_list()
-        for i in idx:
-            idx2 = df[df.index < i].MLH.last_valid_index()
-            if idx2 is not None:
-                #if (i - idx2) <= timedelta(minutes=120):
-                if (i - idx2) <= timedelta(minutes=240):
-                    #df["diff"][i] = df.MLH[i] - df.MLH[idx2]
-                    df.loc[i, "diff"]= df.MLH[i] - df.MLH[idx2]
-
 
         ## REMOVE STUCK MLH AT DAY/WARM SEASONS
 
         df = absolute_stuck_mlh (df)
     
         print("filter Stuck MLH done")
-
-
-        ## REMOVE OVERSESTIMATIONS
-
-        df = day_peaks(
-            df,
-            values_qc["day_peak"]["threshold_increase"] * 3,
-            values_qc["day_peak"]["time_range_to_detect_decrease"] + 120,
-            values_qc["day_peak"]["time_steps_to_define_rolling_diff"] - 2,
-            "warm", 
-        )
-
-
-
-        #if ~warm | (month2 == 4):
-
-        #    print("OVERESTIMATION FUNCTION ")
-        #    df = overestimation(df)
-            #print(indices_consecutifs)
-
-        print("filter Massive Increase/decrease at day done")
-
 
 
         ## EXTREME POINTS
