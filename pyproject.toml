@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=69", "setuptools-scm>=8", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "qc-sf-python"
+dynamic = ["version"]
+description = "Quality control for STRATFINDER atmospheric boundary layer height data"
+authors = [{name = "Melania Van Hove"}]
+requires-python = ">=3.10"
+dependencies = [
+    "click",
+    "toml",
+    "xarray",
+    "pandas",
+    "pvlib",
+    "netcdf4",
+    "numpy",
+]
+
+[project.scripts]
+qc-sf = "qc_sf_python.qc_daily_final:main"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools_scm]

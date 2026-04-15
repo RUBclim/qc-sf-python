@@ -3,21 +3,19 @@
 import os
 import json
 import toml
-import subprocess
 
-from datetime import date, timedelta, time, datetime
+from datetime import timedelta, datetime
 
 import xarray as xr
 import pandas as pd
 import numpy as np
-from typing import Dict, List, Tuple
+from typing import Dict, List
 from pathlib import Path
-from pvlib.location import Location
+from . import __version__
 
 pd.options.mode.chained_assignment = None  ## Warning avoid : ' SettingWithCopyWarning '
 
 
-__version__ = "2026.02"
 __author__ = "Melania Van Hove"
 
 
@@ -252,7 +250,7 @@ def massive_inc_night(
             else:  # all layer is overestimated
                 ind = ind + df[idx : idx_last[0]].index.to_list()
 
-    ind = pd.unique(ind)
+    ind = np.unique(ind)
     ind = df["FLAG_QC"][ind][df.FLAG_QC == 0].index.to_list()
     print(ind)
     df.loc[ind, "FLAG_QC"] = 100
@@ -310,14 +308,14 @@ def massive_dec_night(
                 print("removing from ss+3 to idx")
                 ind += df[ss:idx].index.to_list()
 
-    ind = pd.unique(ind)
+    ind = np.unique(ind)
     ind = df["FLAG_QC"][ind][df.FLAG_QC == 0].index.to_list()
     print(ind)
     df.loc[ind, "FLAG_QC"] = 100
 
     return df
 
-def create_df3day(day_1a: Path, day_2a: Path, day_3a: Path) -> pd.DataFrame:
+def create_df3day(day_1a: Path, day_2a: Path, day_3a: Path | None) -> pd.DataFrame:
     """create a merged dataframe of the J-1,J and J+1 file ;
         if J-1 or J+1 doesnt exist, it is replaced by en empty df
 
@@ -325,20 +323,18 @@ def create_df3day(day_1a: Path, day_2a: Path, day_3a: Path) -> pd.DataFrame:
     Args:
         day_1a (str): Path of the J-1 L2A file
         day_2a (str): Path of the J L2A file
-        day_3a (str): Path of the J+1 L2A file
+        day_3a (str | None): Path of the J+1 L2A file, or None if not available
 
     Returns:
         pd.dataframe : merged dataframe of these 3 files
     """
-    isFile1, isFile3 = (
-        os.path.isfile(day_1a),
-        os.path.isfile(day_3a),
-    )
+    isFile1 = os.path.isfile(day_1a) if day_1a else False
+    isFile3 = os.path.isfile(day_3a) if day_3a else False
 
     ############### DATAFRAME PREPARED FOR THE END ####################
 
     df_day_2 = clean_time_array(xr.open_dataset(day_2a)).to_dataframe()
-    df_day_2 = df_day_2.reset_index(level=1, drop=True)
+    df_day_2 = df_day_2.reset_index(level=0, drop=True)
     df_day_2 = df_day_2.drop(columns=['platform_id', 'station_name'])
     ############### AVERAGE 15 MIN ################
     
@@ -359,7 +355,7 @@ def create_df3day(day_1a: Path, day_2a: Path, day_3a: Path) -> pd.DataFrame:
 
     if isFile1:
         df1 = clean_time_array(xr.open_dataset(day_1a)).to_dataframe()
-        df1 = df1.reset_index(level=1, drop=True)
+        df1 = df1.reset_index(level=0, drop=True)
         df1 = df1[df1.index.date == df1.index.date[0]]
         df1 = df1.drop(columns=['platform_id', 'station_name'])
         df1 = df1.resample("15min").mean()
@@ -371,7 +367,7 @@ def create_df3day(day_1a: Path, day_2a: Path, day_3a: Path) -> pd.DataFrame:
 
     if isFile3:
         df3 = clean_time_array(xr.open_dataset(day_3a)).to_dataframe()
-        df3 = df3.reset_index(level=1, drop=True)
+        df3 = df3.reset_index(level=0, drop=True)
         df3 = df3.drop(columns=['platform_id', 'station_name'])
         df3 = df3.resample("15min").mean()
         df3.index = pd.to_datetime(df3.index.values) + timedelta(minutes=15)
@@ -433,7 +429,7 @@ def conv_np64dt_to_dt(time_np64: np.datetime64) -> datetime.utcfromtimestamp:
     Returns:
         datetime.datetime: Converted time to the datetime.datetime class
     """
-    ts = (time_np64 - np.datetime64("1970-01-01T00:00:00Z")) / np.timedelta64(1, "s")
+    ts = (time_np64 - np.datetime64("1970-01-01")) / np.timedelta64(1, "s")
     ts = datetime.utcfromtimestamp(ts)
     return ts
 
@@ -452,6 +448,7 @@ def Change_dims(ds: xr.Dataset) -> xr.Dataset:
     ds["platform_id"] = ds["platform_id"].astype(str)
     ds = ds.squeeze(dim="station")
     ds = ds.drop_vars("station")
+    ds = ds.set_coords("station_name")
     ds = ds.expand_dims(dim="station_name")
     #ds = ds.assign_coords({"station_name": ds["station_name"]})
     ds = ds.transpose()
@@ -485,14 +482,13 @@ def Transform_list_type(list_to_trans: list, type_to: str) -> list:
     return list(np.array(list_to_trans).astype(type_to))
 
 
-def Get_gloabal_attrs(ds: xr.Dataset, config_meta: Dict, dir_path: str) -> xr.Dataset:
+def Get_gloabal_attrs(ds: xr.Dataset, config_meta: Dict) -> xr.Dataset:
     """Add the global attributes contains into the toml configuration file
     into the
 
     Args:
         ds (xr.Dataset): xarray dataset
         config_meta (Dict): Dictionary containing the global attributes
-        dir_path (str) : Path of the executed program
     Returns:
         xr.Dataset : xarray dataset with added global attributes
     """
@@ -508,7 +504,7 @@ def Get_gloabal_attrs(ds: xr.Dataset, config_meta: Dict, dir_path: str) -> xr.Da
     ds.attrs["instrument_type"] = dict_attrs["instrument_type"]
     ds.attrs["wmo_id"] = dict_attrs["wmo_id"]
     ds.attrs["instrument_serial_number"] = dict_attrs["instrument_serial_number"]
-    ds.attrs["optical_module_id"] = dict_attrs["optical_module_id"]
+    ds.attrs["optical_module_id"] = dict_attrs.get("optical_module_id", "unknown")
     ds.attrs["instrument_firmware_version"] = dict_attrs["instrument_firmware_version"]
     ds.attrs["overlap_function"] = dict_attrs["overlap_function"]
     ds.attrs["overlap_is_corrected"] = dict_attrs["overlap_is_corrected"]
@@ -523,16 +519,18 @@ def Get_gloabal_attrs(ds: xr.Dataset, config_meta: Dict, dir_path: str) -> xr.Da
     ds.attrs["geospatial_lon_min"] = np.float64(ds.attrs["geospatial_lon_min"])
     ds.attrs["geospatial_lon_max"] = np.float64(ds.attrs["geospatial_lon_max"])
 
-    # write product version
-    r = subprocess.check_output(['git', '-C', dir_path, 'describe', '--tags', '--always'],text=True).strip()
-    quality_control_version = r[1:8]
-    
-    STRATfinder_version = dict_attrs["history"][104:111]  # pour avoir la version de STRATfinder qui est sous la forme : v2025.09-5-g1a2b3c4
-    
-    product_version = max(datetime.strptime(STRATfinder_version, "%Y.%m"), datetime.strptime(quality_control_version, "%Y.%m"))
-    product_version = product_version.strftime("%Y.%m")
-    ds.attrs["product_version"] = f"v{product_version}"
-    ds.attrs["source"] = f"Automatic Lidar Ceilometer (ALC); STRATFINDER version : v{STRATfinder_version} ; Quality control version : v{quality_control_version}"
+    # The package version is provided by setuptools_scm and exposed via importlib metadata.
+    quality_control_version = __version__
+    if not quality_control_version.startswith("v"):
+        product_version = f"v{quality_control_version}"
+    else:
+        product_version = quality_control_version
+    ds.attrs["product_version"] = product_version
+    ds.attrs["source"] = (
+        "Automatic Lidar Ceilometer (ALC); "
+        f"STRATFINDER metadata source: {dict_attrs.get('history', 'unknown')} ; "
+        f"Quality control version : {product_version}"
+    )
     # end product versions
 
 

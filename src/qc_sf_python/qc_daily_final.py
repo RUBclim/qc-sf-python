@@ -1,9 +1,8 @@
 #!/usr/bin/env python
 
-import os
 import sys
 import click
-from functions import * # noqa: F405
+import qc_sf_python.functions as funcs
 from datetime import date, timedelta, time
 
 import xarray as xr
@@ -15,7 +14,6 @@ from pvlib.location import Location
 pd.options.mode.chained_assignment = None  ## Warning avoid : ' SettingWithCopyWarning '
 
 
-__version__ = "2026.02"
 __author__ = "Melania Van Hove"
 
 def qc_daily_final(
@@ -27,15 +25,15 @@ def qc_daily_final(
         config_attributes_file: Path,
         output_day2a: Path):
     # Read the values into the toml configuration file related to the values
-    values_qc = Read_toml(file_values_qca)
+    values_qc = funcs.Read_toml(file_values_qca)
     # Read the values of the toml configuration files related to the global and variable's attributes
-    attrs_dict = Read_toml(config_attributes_file)
+    attrs_dict = funcs.Read_toml(config_attributes_file)
     # Define the datetime
     # today = date.today()
     # date_today = today.strftime("%B %d, %Y")
-    maxmlh = get_maxmlh(config_filea)
+    maxmlh = funcs.get_maxmlh(config_filea)
     print(f"Read the file {config_filea}")
-    df = create_df3day(day_1a, day_2a, day_3a)
+    df = funcs.create_df3day(day_1a, day_2a, day_3a)
 
     print("complete dataframe created")
     ndata_day2 = int(len(df) / 3)
@@ -47,12 +45,12 @@ def qc_daily_final(
         # summer = (month2 > 5) and (month2 < 9)
         lat = ds["station_latitude"][0].values
         lon = ds["station_longitude"][0].values
-        ds = clean_time_array(ds)
+        ds = funcs.clean_time_array(ds)
         df_day_2 = ds.to_dataframe()
-        df_day_2 = df_day_2.reset_index(level=1, drop=True)
+        df_day_2 = df_day_2.reset_index(level=0, drop=True)
         df_day_2 = df_day_2[~df_day_2.index.duplicated(keep="first")]
         df_day_2 = df_day_2.loc[df_day_2.index.dropna()]
-        day_today = conv_np64dt_to_dt(ds["time"][0].values)
+        day_today = funcs.conv_np64dt_to_dt(ds["time"][0].values)
         day0 = day_today - timedelta(days=2)
         day1 = (day_today - timedelta(days=1)).isoformat()[0:10]
         day2 = day_today.isoformat()[0:10]
@@ -160,7 +158,7 @@ def qc_daily_final(
 
         ## RAIN
 
-        df = rain_filter(df)
+        df = funcs.rain_filter(df)
 
         print("filter Rain done")
 
@@ -169,7 +167,7 @@ def qc_daily_final(
         # differences between consecutive mlh (taking NaN into account)
         df["diff"] = df["MLH"].diff()
         d = (df.day == 2) | (df.day == 3)
-        df[d]["diff"] = df[d]["MLH"].diff()
+        df.loc[d, "diff"] = df.loc[d, "MLH"].diff()
         idx = df[np.isnan(df["diff"])].index.to_list()
         for i in idx:
             idx2 = df[df.index < i].MLH.last_valid_index()
@@ -178,7 +176,7 @@ def qc_daily_final(
                     # df["diff"][i] = df.MLH[i] - df.MLH[idx2]
                     df.loc[i, "diff"] = df.MLH[i] - df.MLH[idx2]
 
-        df = massive_inc_night(
+        df = funcs.massive_inc_night(
             df,
             values_qc["massive_inc_night"]["threshold_increase"],
             values_qc["massive_inc_night"]["time_steps_to_define_rolling_diff"],
@@ -186,7 +184,7 @@ def qc_daily_final(
 
         print("filter Massive increase done")
 
-        df = massive_dec_night(
+        df = funcs.massive_dec_night(
             df,
             values_qc["massive_dec_night"]["threshold_decrease"],
             values_qc["massive_dec_night"]["time_steps_to_define_rolling_diff"],
@@ -196,20 +194,20 @@ def qc_daily_final(
 
         ## REMOVE STUCK MLH AT DAY/WARM SEASONS
 
-        df = absolute_stuck_mlh(df)
+        df = funcs.absolute_stuck_mlh(df)
 
         print("filter Stuck MLH done")
 
         ## EXTREME POINTS
 
         if (month2 < 3) | (month2 > 11):
-            df = extreme(
+            df = funcs.extreme(
                 df,
                 values_qc["extreme"]["fraction_of_the_max_mlh_cold"],
                 maxmlh,
             )
         else:
-            df = extreme(
+            df = funcs.extreme(
                 df,
                 values_qc["extreme"]["fraction_of_the_max_mlh_warm"],
                 maxmlh,
@@ -244,18 +242,18 @@ def qc_daily_final(
                         & (df_day_2.index.time >= df.index.time[i - 1])
                 ),
                 "FLAG_QC",
-            ] = df.FLAG_QC[i]
+            ] = df.FLAG_QC.iloc[i]
 
         ######## PREPARE L2A DATAFRAME TO BE FILLED WITH NEW FLAG_QC AND THEREFORE NEW MLH #########
 
-        df2 = clean_time_array(xr.open_dataset(day_2a)).to_dataframe()
+        df2 = funcs.clean_time_array(xr.open_dataset(day_2a)).to_dataframe()
 
         df2["FLAG_QC"] = list(df_day_2["FLAG_QC"].astype(np.int32))
         df2["FLAG_QC"] = df2["FLAG_QC"][~np.isnan(df2["MLH"])]
         df2["MLH"] = df2[df2.FLAG_QC == 0]["MLH"]
 
-        df2["MLH"].fillna(-999, inplace=True)
-        df2["FLAG_QC"].fillna(-9, inplace=True)
+        df2["MLH"] = df2["MLH"].fillna(-999)
+        df2["FLAG_QC"] = df2["FLAG_QC"].fillna(-9)
 
         MLH = df2["MLH"].to_xarray()
         ds["MLH"] = MLH.transpose("time", "station")
@@ -271,14 +269,13 @@ def qc_daily_final(
 
         ds = ds.sel(time=slice(day2, day2))
         # Do some modifications on the dimensions
-        ds = Change_dims(ds)
+        ds = funcs.Change_dims(ds)
         # add attributes
-        dir_path = os.path.dirname(os.path.realpath(f"{sys.argv[0]}"))
-        ds = Get_gloabal_attrs(ds, attrs_dict, dir_path)
-        ds = Get_vars_attr_enc(ds, attrs_dict)
+        ds = funcs.Get_gloabal_attrs(ds, attrs_dict)
+        ds = funcs.Get_vars_attr_enc(ds, attrs_dict)
         # Remove the attribute units to make it work
         ds["time"].attrs.pop("units")
-        ds_enco = get_encoding(ds)
+        ds_enco = funcs.get_encoding(ds)
         ds.to_netcdf(
             output_day2a,
             encoding=ds_enco,
@@ -313,10 +310,10 @@ def qc_daily_final(
         exists=True, readable=True, file_okay=True, dir_okay=False, resolve_path=True
     ),
 )
-# File of day + 1 L2A file
+# File of day + 1 L2A file (optional)
 @click.argument(
     "day_3a",
-    nargs=1,
+    nargs=-1,
     type=click.Path(
         exists=False, readable=True, file_okay=True, dir_okay=False, resolve_path=True
     ),
@@ -361,7 +358,7 @@ def qc_daily_final(
 def main(
     day_1a: click.Path,
     day_2a: click.Path,
-    day_3a: click.Path,
+    day_3a: tuple[str, ...],
     config_filea: click.Path,
     file_values_qca: click.Path,
     config_attributes_file: click.Path,
@@ -370,7 +367,8 @@ def main(
     ## CHECK IF FILES
     click.echo(click.format_filename(day_1a))
     click.echo(click.format_filename(day_2a))
-    click.echo(click.format_filename(day_3a))
+    day_3a: str | None = day_3a[0] if day_3a else None
+    click.echo(click.format_filename(day_3a) if day_3a else "None")
     click.echo(config_filea)
     click.echo(file_values_qca)
     click.echo(config_attributes_file)
