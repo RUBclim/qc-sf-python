@@ -20,6 +20,8 @@ dependencies = [
 
 [project.scripts]
 qc-sf = "qc_sf_python.qc_daily_final:main"
+plot-daily = "qc_sf_python.plot_daily:main"
+plot-sites-json = "qc_sf_python.plot_sites_json:main"
 
 [tool.setuptools]
 package-dir = {"" = "src"}
