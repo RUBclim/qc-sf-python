@@ -20,8 +20,6 @@ from solartime import (
     SolarTime,
 )  ## to be replaced by pvlib if more problems encountered, works for now
 
-pd.options.mode.chained_assignment = None  ## Warning avoid : ' SettingWithCopyWarning '
-
 __version__ = "1.0.0"
 __author__ = "Melania Van Hove"
 
@@ -66,7 +64,7 @@ def average_dataframe(
     """
     with xr.open_mfdataset(list_files) as ds:
         df = ds.to_dataframe()
-        df.reset_index(drop=True, level=1, inplace=True)
+        df = df.reset_index(drop=True, level=1)
         df = df[df.index.duplicated() == False]
         lat, lon = df["station_latitude"][0], df["station_longitude"][0]
 
@@ -85,14 +83,14 @@ def average_dataframe(
         df2 = df2.to_frame(index=True, name=None)
         df2.index.names = ["time"]
         ave_df = pd.merge(ave_df, df2, how="right", right_index=True, left_index=True)
-        ave_df.drop(index=ave_df.index[0], axis=0, inplace=True)
+        ave_df = ave_df.drop(index=ave_df.index[0], axis=0)
 
         ## IN CASE DATAFRAME DOESNT START/END AT MIDNIGHT
         df2 = pd.date_range(start_date, end_date, freq="15min")
         df2 = df2.to_frame(index=True, name=None)
         df2.index.names = ["time"]
         ave_df = pd.merge(ave_df, df2, how="right", right_index=True, left_index=True)
-        ave_df.drop(index=ave_df.index[0], axis=0, inplace=True)
+        ave_df = ave_df.drop(index=ave_df.index[0], axis=0)
         return lat, lon, start_date, end_date, ave_df
 
 
@@ -263,7 +261,7 @@ def main(
         )
     )
 
-    df_final.set_index("time_relSR", inplace=True)
+    df_final = df_final.set_index("time_relSR")
 
     month_lab_list = [
         " ",

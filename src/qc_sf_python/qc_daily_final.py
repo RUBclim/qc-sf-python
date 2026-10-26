@@ -11,8 +11,6 @@ import numpy as np
 from pathlib import Path
 from pvlib.location import Location
 
-pd.options.mode.chained_assignment = None  ## Warning avoid : ' SettingWithCopyWarning '
-
 
 __author__ = "Melania Van Hove"
 
@@ -91,8 +89,10 @@ def qc_daily_final(
 
             # Calcul des heures de lever, coucher et transit du soleil
             sun_times = location.get_sun_rise_set_transit(df_test.index.tz_localize('UTC'))
-            schedule = {'sunrise': pd.Timestamp(sun_times["sunrise"].values[0]),
-                        'sunset': pd.Timestamp(sun_times["sunset"].values[0])}
+            schedule = {
+                'sunrise': pd.Timestamp(sun_times["sunrise"].dt.tz_convert(None).to_numpy()[0]),
+                'sunset': pd.Timestamp(sun_times["sunset"].dt.tz_convert(None).to_numpy()[0]),
+            }
 
             sunrise1 = (
                                schedule["sunrise"].second
@@ -233,7 +233,7 @@ def qc_daily_final(
         df = df[: len(df) - 1]
         a = df.index[len(df) - 1]
         b = a - timedelta(milliseconds=1)
-        df.rename(index={a: b}, inplace=True)
+        df = df.rename(index={a: b})
 
         for i in range(1, len(df)):
             df_day_2.loc[

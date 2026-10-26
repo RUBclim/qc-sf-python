@@ -88,7 +88,10 @@ def main(l2a: Path, l2b: Path, output: Path) -> None:
         #schedule = sun.sun_utc(date_, lat, lon)
         # Calcul des heures de lever, coucher et transit du soleil
         sun_times = location.get_sun_rise_set_transit(df_test.index.tz_localize('UTC'))
-        schedule = {'sunrise':pd.Timestamp(sun_times["sunrise"].values[0]), 'sunset':pd.Timestamp(sun_times["sunset"].values[0])}
+        schedule = {
+            'sunrise': pd.Timestamp(sun_times["sunrise"].dt.tz_convert(None).to_numpy()[0]),
+            'sunset':pd.Timestamp(sun_times["sunset"].dt.tz_convert(None).to_numpy()[0]),
+        }
 
         ss = schedule["sunset"]
         sr = schedule["sunrise"]

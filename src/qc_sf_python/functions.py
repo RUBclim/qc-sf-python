@@ -4,7 +4,7 @@ import os
 import json
 import toml
 
-from datetime import timedelta, datetime
+from datetime import timedelta, datetime, timezone
 
 import xarray as xr
 import pandas as pd
@@ -12,8 +12,6 @@ import numpy as np
 from typing import Dict, List
 from pathlib import Path
 from . import __version__
-
-pd.options.mode.chained_assignment = None  ## Warning avoid : ' SettingWithCopyWarning '
 
 
 __author__ = "Melania Van Hove"
@@ -351,7 +349,7 @@ def create_df3day(day_1a: Path, day_2a: Path, day_3a: Path | None) -> pd.DataFra
         index=True, name=None
     )
     df_id.index.names = ["time"]
-    df_id.drop(index=df_id.index[0], axis=0, inplace=True)
+    df_id = df_id.drop(index=df_id.index[0], axis=0)
 
     if isFile1:
         df1 = clean_time_array(xr.open_dataset(day_1a)).to_dataframe()
@@ -420,7 +418,7 @@ def get_encoding(ds: xr.Dataset) -> Dict:
     return encoded
 
 
-def conv_np64dt_to_dt(time_np64: np.datetime64) -> datetime.utcfromtimestamp:
+def conv_np64dt_to_dt(time_np64: np.datetime64) -> datetime:
     """ " Convert np.datetime64 to datetime.
 
     Args:
@@ -430,7 +428,7 @@ def conv_np64dt_to_dt(time_np64: np.datetime64) -> datetime.utcfromtimestamp:
         datetime.datetime: Converted time to the datetime.datetime class
     """
     ts = (time_np64 - np.datetime64("1970-01-01")) / np.timedelta64(1, "s")
-    ts = datetime.utcfromtimestamp(ts)
+    ts = datetime.fromtimestamp(ts, tz=timezone.utc)
     return ts
 
 
