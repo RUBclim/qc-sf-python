@@ -492,20 +492,15 @@ def Get_gloabal_attrs(ds: xr.Dataset, config_meta: Dict) -> xr.Dataset:
     """
 
     Global_attrs = config_meta["Global_attributes"]
-    dict_attrs = ds.attrs
-    ds.attrs = Global_attrs
+    dict_attrs = ds.attrs.copy()
+
+    # Preserve upstream metadata; QC metadata explicitly overrides it.
+    ds.attrs.update(Global_attrs)
+
     ds.attrs["contributor_name"] = dict_attrs["institution"] + ", "+ Global_attrs["contributor_name"]
     ds.attrs["contributor_institution"] = dict_attrs["institution"] + ", "+ Global_attrs["contributor_name"]
     ds.attrs["contributor_role"] = dict_attrs["institution"] +" operate the Lidar measurements, "+ Global_attrs["contributor_role"]
-    ds.attrs["site_location"] = dict_attrs["site_location"]
-    ds.attrs["instrument_id"] = dict_attrs["instrument_id"]
-    ds.attrs["instrument_type"] = dict_attrs["instrument_type"]
-    ds.attrs["wmo_id"] = dict_attrs["wmo_id"]
-    ds.attrs["instrument_serial_number"] = dict_attrs["instrument_serial_number"]
-    ds.attrs["optical_module_id"] = dict_attrs.get("optical_module_id", "unknown")
-    ds.attrs["instrument_firmware_version"] = dict_attrs["instrument_firmware_version"]
-    ds.attrs["overlap_function"] = dict_attrs["overlap_function"]
-    ds.attrs["overlap_is_corrected"] = dict_attrs["overlap_is_corrected"]
+
     ds.attrs["time_coverage_start"] = str(ds["time"].values[0])
     ds.attrs["time_coverage_end"] = str(ds["time"].values[-1])
     ds.attrs["geospatial_lat_min"] = ds["station_latitude"].values[0]
@@ -529,6 +524,12 @@ def Get_gloabal_attrs(ds: xr.Dataset, config_meta: Dict) -> xr.Dataset:
         f"STRATFINDER metadata source: {dict_attrs.get('history', 'unknown')} ; "
         f"Quality control version : {product_version}"
     )
+
+    ds.attrs["history"] = (
+        f"{datetime.now():%Y%m%d} qc-sf-python {product_version}; "
+        f"{dict_attrs.get('history', '')}"
+    ).rstrip("; ")
+
     # end product versions
 
 
